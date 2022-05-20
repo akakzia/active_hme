@@ -83,7 +83,7 @@ def update_flat(actor_network, critic_network, critic_target_network, policy_opt
 
 
 def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha, target_entropy, alpha_optim, obs_norm, ag_norm, g_norm,
-                    obs_next_norm, ag_next_norm, actions, rewards, args):
+                    anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards, args):
     # Tensorize
     obs_norm_tensor = torch.tensor(obs_norm, dtype=torch.float32)
     obs_next_norm_tensor = torch.tensor(obs_next_norm, dtype=torch.float32)
@@ -93,6 +93,9 @@ def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha
     actions_tensor = torch.tensor(actions, dtype=torch.float32)
     r_tensor = torch.tensor(rewards, dtype=torch.float32).reshape(rewards.shape[0], 1)
 
+    anchor_g_norm_tensor = torch.tensor(anchor_g_norm, dtype=torch.float32)
+    anchor_r_tensor = torch.tensor(anchor_rewards, dtype=torch.float32).reshape(anchor_rewards.shape[0], 1)
+
     if args.cuda:
         obs_norm_tensor = obs_norm_tensor.cuda()
         obs_next_norm_tensor = obs_next_norm_tensor.cuda()
@@ -101,6 +104,9 @@ def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha
         ag_next_norm_tensor = ag_next_norm_tensor.cuda()
         actions_tensor = actions_tensor.cuda()
         r_tensor = r_tensor.cuda()
+
+        anchor_g_norm_tensor = anchor_g_norm_tensor.cuda()
+        anchor_r_tensor = anchor_r_tensor.cuda()
 
     with torch.no_grad():
         model.forward_pass(obs_next_norm_tensor, ag_next_norm_tensor, g_norm_tensor)
@@ -115,15 +121,21 @@ def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha
     qf2_loss = F.mse_loss(qf2, next_q_value)
     qf_loss = qf1_loss + qf2_loss
 
-    # Value loss
-    v = model.value_forward_pass(g_norm_tensor)
-    v_loss = F.mse_loss(v, next_q_value)
-
     # the actor loss
     pi, log_pi = model.pi_tensor, model.log_prob
     qf1_pi, qf2_pi = model.q1_pi_tensor, model.q2_pi_tensor
     min_qf_pi = torch.min(qf1_pi, qf2_pi)
     policy_loss = ((alpha * log_pi) - min_qf_pi).mean()
+
+    # Value loss
+    with torch.no_grad():
+        model.forward_pass(obs_next_norm_tensor, ag_next_norm_tensor, anchor_g_norm_tensor)
+        _, log_pi_n = model.pi_tensor, model.log_prob
+        qf1_n_target, qf2_n_target = model.target_q1_pi_tensor, model.target_q2_pi_tensor
+        min_qf_n_target = torch.min(qf1_n_target, qf2_n_target) - alpha * log_pi_n
+        n_q_value = anchor_r_tensor + args.gamma * min_qf_n_target
+    v = model.value_forward_pass(anchor_g_norm_tensor)
+    v_loss = F.mse_loss(v, n_q_value)
 
     # start to update the network
     policy_optim.zero_grad()

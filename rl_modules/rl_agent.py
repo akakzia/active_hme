@@ -190,10 +190,15 @@ class RLAgent:
         # pre-process the observation and goal
         o, o_next, g, ag, ag_next, actions, rewards = transitions['obs'], transitions['obs_next'], transitions['g'], transitions['ag'], \
                                                       transitions['ag_next'], transitions['actions'], transitions['r']
+        anchor_g = transitions['anchor_g']
+
         transitions['obs'], transitions['g'] = self._preproc_og(o, g)
         transitions['obs_next'], transitions['g_next'] = self._preproc_og(o_next, g)
         _, transitions['ag'] = self._preproc_og(o, ag)
         _, transitions['ag_next'] = self._preproc_og(o, ag_next)
+        _, transitions['anchor_g'] = self._preproc_og(o, anchor_g)
+
+        anchor_rewards = transitions['anchor_r']
 
         # apply normalization
         obs_norm = self.o_norm.normalize(transitions['obs'])
@@ -202,8 +207,11 @@ class RLAgent:
         obs_next_norm = self.o_norm.normalize(transitions['obs_next'])
         ag_next_norm = self.g_norm.normalize(transitions['ag_next'])
 
+        anchor_g_norm = self.g_norm.normalize(transitions['anchor_g'])
+
         update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
-                    self.alpha_optim, obs_norm, ag_norm, g_norm, obs_next_norm, ag_next_norm, actions, rewards, self.args)
+                    self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
+                    self.args)
 
     def get_goal_values(self, goals):
         g_norm = self.g_norm.normalize(goals)
