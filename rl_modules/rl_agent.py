@@ -56,15 +56,18 @@ class RLAgent:
             self.model.actor.cuda()
             self.model.critic.cuda()
             self.model.critic_target.cuda()
+            self.model.value_network.cuda()
         # sync the networks across the CPUs
         sync_networks(self.model.critic)
         sync_networks(self.model.actor)
         hard_update(self.model.critic_target, self.model.critic)
         sync_networks(self.model.critic_target)
+        sync_networks(self.model.value_network)
 
         # create the optimizer
         self.policy_optim = torch.optim.Adam(list(self.model.actor.parameters()), lr=self.args.lr_actor)
         self.critic_optim = torch.optim.Adam(list(self.model.critic.parameters()), lr=self.args.lr_critic)
+        self.value_optim = torch.optim.Adam(list(self.model.value_network.parameters()), lr=self.args.lr_critic)
         
         # create the normalizer
         self.o_norm = normalizer(size=self.env_params['obs'], default_clip_range=self.args.clip_range)
@@ -199,8 +202,23 @@ class RLAgent:
         obs_next_norm = self.o_norm.normalize(transitions['obs_next'])
         ag_next_norm = self.g_norm.normalize(transitions['ag_next'])
 
-        update_gnns(self.model, self.policy_optim, self.critic_optim, self.alpha, self.log_alpha, self.target_entropy, self.alpha_optim,
-            obs_norm, ag_norm, g_norm, obs_next_norm, ag_next_norm, actions, rewards, self.args)
+        update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
+                    self.alpha_optim, obs_norm, ag_norm, g_norm, obs_next_norm, ag_next_norm, actions, rewards, self.args)
+
+    def get_goal_values(self, goals):
+        g_norm = self.g_norm.normalize(goals)
+        g_norm_tensor = torch.tensor(g_norm, dtype=torch.float32)
+        if self.args.cuda:
+            g_norm_tensor = g_norm_tensor.cuda()
+        
+        with torch.no_grad():
+            self.model.value_forward_pass(g_norm_tensor)
+        if self.args.cuda:
+            values = self.model.value.cpu().numpy()
+        else:
+            values = self.model.value.numpy()
+        
+        return values.squeeze()
 
     def save(self, model_path, epoch):
         torch.save([self.o_norm.mean, self.o_norm.std, self.g_norm.mean, self.g_norm.std,

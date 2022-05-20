@@ -144,10 +144,14 @@ def launch(args):
                                                        true_eval=True,  # this is offline evaluations
                                                        )
 
+            # Generate values for goals
+            goal_values = policy.get_goal_values(eval_goals)
+
             results = np.array([e['success'][-1].astype(np.float32) for e in episodes])
             rewards = np.array([e['rewards'][-1] for e in episodes])
             all_results = MPI.COMM_WORLD.gather(results, root=0)
             all_rewards = MPI.COMM_WORLD.gather(rewards, root=0)
+            all_goal_values = MPI.COMM_WORLD.gather(goal_values, root=0)
             time_dict['eval'] += time.time() - t_i
 
             # Logs
@@ -156,8 +160,11 @@ def launch(args):
                 av_res = np.array(all_results).mean(axis=0)
                 av_rewards = np.array(all_rewards).mean(axis=0)
                 global_sr = np.mean(av_res)
-                log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
+                av_goal_values = np.array(all_goal_values).mean(axis=0)
+                for i in range(len(av_goal_values)):
+                    logger.record_tabular(f'value_{i+1}', av_goal_values[i])
 
+                log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:
                     policy.save(model_path, epoch)

@@ -82,7 +82,7 @@ def update_flat(actor_network, critic_network, critic_target_network, policy_opt
     return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
 
 
-def update_gnns(model, policy_optim, critic_optim, alpha, log_alpha, target_entropy, alpha_optim, obs_norm, ag_norm, g_norm,
+def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha, target_entropy, alpha_optim, obs_norm, ag_norm, g_norm,
                     obs_next_norm, ag_next_norm, actions, rewards, args):
     # Tensorize
     obs_norm_tensor = torch.tensor(obs_norm, dtype=torch.float32)
@@ -115,6 +115,10 @@ def update_gnns(model, policy_optim, critic_optim, alpha, log_alpha, target_entr
     qf2_loss = F.mse_loss(qf2, next_q_value)
     qf_loss = qf1_loss + qf2_loss
 
+    # Value loss
+    v = model.value_forward_pass(g_norm_tensor)
+    v_loss = F.mse_loss(v, next_q_value)
+
     # the actor loss
     pi, log_pi = model.pi_tensor, model.log_prob
     qf1_pi, qf2_pi = model.q1_pi_tensor, model.q2_pi_tensor
@@ -132,6 +136,12 @@ def update_gnns(model, policy_optim, critic_optim, alpha, log_alpha, target_entr
     qf_loss.backward()
     sync_grads(model.critic)
     critic_optim.step()
+
+    # update the value network
+    value_optim.zero_grad()
+    v_loss.backward()
+    sync_grads(model.value_network)
+    value_optim.step()
 
     alpha_loss, alpha_tlogs = update_entropy(alpha, log_alpha, target_entropy, log_pi, alpha_optim, args)
 
