@@ -210,10 +210,16 @@ class RnGoalValue(nn.Module):
 
     def message_passing(self, g):
         batch_size = g.shape[0]
+        objects_one_hot = [torch.Tensor([1., 0., 0., 0., 0.]), torch.Tensor([0., 1., 0., 0., 0.]), 
+                           torch.Tensor([0., 0., 1., 0., 0.]), torch.Tensor([0., 0., 0., 1., 0.]), 
+                           torch.Tensor([0., 0., 0., 0., 1.])]
+        
         if self.args_cuda:
-            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1).cuda() for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+            # objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1).cuda() for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1).cuda() for e in objects_one_hot]
         else:
-            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+            # objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in objects_one_hot]
 
         inp_mp = torch.stack([torch.cat([g[:, self.predicate_ids[i]], objects_one_hot[self.edges[i][0]],
                                          objects_one_hot[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
