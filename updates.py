@@ -82,7 +82,7 @@ def update_flat(actor_network, critic_network, critic_target_network, policy_opt
     return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
 
 
-def update_deepsets(model, policy_optim, critic_optim, alpha, log_alpha, target_entropy, alpha_optim, obs_norm, ag_norm, g_norm,
+def update_gnns(model, policy_optim, critic_optim, alpha, log_alpha, target_entropy, alpha_optim, obs_norm, ag_norm, g_norm,
                     obs_next_norm, ag_next_norm, actions, rewards, args):
     # Tensorize
     obs_norm_tensor = torch.tensor(obs_norm, dtype=torch.float32)

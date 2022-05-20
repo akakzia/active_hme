@@ -20,9 +20,9 @@ def get_args():
     parser.add_argument('--agent', type=str, default='SAC', help='the RL algorithm name')
     parser.add_argument('--n-blocks', type=int, default=5, help='The number of blocks to be considered in the FetchManipulate env')
     # the training arguments
-    parser.add_argument('--n-epochs', type=int, default=10, help='the number of epochs to train the agent')
-    parser.add_argument('--n-cycles', type=int, default=1, help='the times to collect samples per epoch')
-    parser.add_argument('--n-batches', type=int, default=1, help='the times to update the network')
+    parser.add_argument('--n-epochs', type=int, default=1000, help='the number of epochs to train the agent')
+    parser.add_argument('--n-cycles', type=int, default=50, help='the times to collect samples per epoch')
+    parser.add_argument('--n-batches', type=int, default=30, help='the times to update the network')
     parser.add_argument('--num-rollouts-per-mpi', type=int, default=2, help='the rollouts per mpi')
     parser.add_argument('--batch-size', type=int, default=256, help='the sample batch size')
     # the replay arguments
@@ -52,7 +52,7 @@ def get_args():
     parser.add_argument('--normalize_goal', type=bool, default=False, help='do evaluation at the end of the epoch w/ frequency')
     parser.add_argument('--clip-range', type=float, default=5, help='the clip range')
     # the gnns arguments
-    parser.add_argument('--architecture', type=str, default='interaction_network', help='[full_gn, interaction_network, relation_network, deep_sets, flat]')
+    parser.add_argument('--architecture', type=str, default='relation_network', help='[full_gn, interaction_network, relation_network, deep_sets, flat]')
     # the testing arguments
     parser.add_argument('--n-test-rollouts', type=int, default=1, help='the number of tests')
 
