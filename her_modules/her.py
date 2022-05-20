@@ -8,10 +8,7 @@ class her_sampler:
         self.reward_type = args.reward_type
         self.replay_strategy = args.replay_strategy
         self.replay_k = args.replay_k
-        if self.replay_strategy == 'future':
-            self.future_p = 1 - (1. / (1 + args.replay_k))
-        else:
-            self.future_p = 0
+        self.future_p = 1 - (1. / (1 + args.replay_k))
         self.reward_func = reward_func
         self.multi_criteria_her = args.multi_criteria_her
         self.obj_ind = np.array([np.arange(i * 3, (i + 1) * 3) for i in range(args.n_blocks)])
@@ -36,11 +33,19 @@ class her_sampler:
         if self.multi_criteria_her:
             for sub_goal in self.semantic_ids:
                 her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)
-                future_offset = np.random.uniform(size=batch_size) * (T - t_samples)
-                future_offset = future_offset.astype(int)
-                future_t = (t_samples + 1 + future_offset)[her_indexes]
-                # Replace
-                future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
+
+                # future goal selection
+                if self.replay_strategy == 'final':
+                    # fictive goal is the final achieved goal of the selected HER episodes
+                    future_ag = episode_batch['ag'][episode_idxs[her_indexes],-1]
+                else:
+                    # sample future achieved goals
+                    future_offset = np.random.uniform(size=batch_size) * (T - t_samples)
+                    future_offset = future_offset.astype(int)
+                    future_t = (t_samples + 1 + future_offset)[her_indexes]
+
+                    # fictive goals are the selected future achieved goals
+                    future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
                 transition_goals = transitions['g'][her_indexes]
                 transition_goals[:, sub_goal] = future_ag[:, sub_goal]
                 transitions['g'][her_indexes] = transition_goals
