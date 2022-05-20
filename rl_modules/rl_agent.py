@@ -80,10 +80,6 @@ class RLAgent:
             self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=self.args.lr_entropy)
 
         # her sampler
-        if args.algo == 'continuous':
-            self.continuous_goals = True
-        else:
-            self.continuous_goals = False
         self.her_module = her_sampler(self.args, compute_rew)
 
         # create the replay buffer

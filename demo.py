@@ -30,11 +30,7 @@ if __name__ == '__main__':
     # args = SimpleNamespace(**params)
     args = get_args()
 
-    if args.algo == 'continuous':
-        args.env_name = 'FetchManipulate5ObjectsContinuous-v0'
-        args.multi_criteria_her = True
-    else:
-        args.env_name = 'FetchManipulate5Objects-v0'
+    args.env_name = 'FetchManipulate5Objects-v0'
 
     # Make the environment
     env = gym.make(args.env_name)

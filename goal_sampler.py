@@ -3,9 +3,6 @@ from utils import get_idxs_per_relation
 from mpi4py import MPI
 
 
-ALL_MASKS = True
-
-
 class GoalSampler:
     def __init__(self, args):
         self.num_rollouts_per_mpi = args.num_rollouts_per_mpi
@@ -16,8 +13,6 @@ class GoalSampler:
 
         self.discovered_goals = []
         self.discovered_goals_str = []
-
-        self.continuous = args.algo == 'continuous'
 
         self.init_stats()
 
@@ -73,10 +68,9 @@ class GoalSampler:
             n = 11
         else:
             n = 6
-        if not self.continuous:
-            for i in np.arange(1, n+1):
-                self.stats['Eval_SR_{}'.format(i)] = []
-                self.stats['Av_Rew_{}'.format(i)] = []
+        for i in np.arange(1, n+1):
+            self.stats['Eval_SR_{}'.format(i)] = []
+            self.stats['Av_Rew_{}'.format(i)] = []
         self.stats['epoch'] = []
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
@@ -93,7 +87,6 @@ class GoalSampler:
         for k in time_dict.keys():
             self.stats['t_{}'.format(k)].append(time_dict[k])
         self.stats['nb_discovered'].append(len(self.discovered_goals))
-        if not self.continuous:
-            for g_id in np.arange(1, len(av_res) + 1):
-                self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
-                self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
+        for g_id in np.arange(1, len(av_res) + 1):
+            self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
+            self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])

@@ -30,6 +30,9 @@ def launch(args):
 
     t_total_init = time.time()
 
+    # Algo verification
+    assert args.algo == 'semantic', 'Only semantic algorithm is implemented'
+
     # Make the environment
     args.env_name = 'FetchManipulate{}Objects-v0'.format(args.n_blocks)
     env = gym.make(args.env_name)
