@@ -169,7 +169,7 @@ class RnActor(nn.Module):
 
 
 class RnGoalValue(nn.Module):
-    def __init__(self, nb_objects, edges, incoming_edges, predicate_ids):
+    def __init__(self, nb_objects, edges, incoming_edges, predicate_ids, cuda):
         super(RnGoalValue, self).__init__()
 
         self.nb_objects = nb_objects
@@ -191,6 +191,8 @@ class RnGoalValue(nn.Module):
         self.incoming_edges = incoming_edges
         self.predicate_ids = predicate_ids
 
+        self.args_cuda = cuda
+
     def forward(self, g):
         # Value message passing using node features, edge features and global features (here body + action)
         # Returns the edges features (which number is equal to the number of edges, i.e. permutations of objects)
@@ -208,7 +210,10 @@ class RnGoalValue(nn.Module):
 
     def message_passing(self, g):
         batch_size = g.shape[0]
-        objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+        if self.args_cuda:
+            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1).cuda() for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
+        else:
+            objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
 
         inp_mp = torch.stack([torch.cat([g[:, self.predicate_ids[i]], objects_one_hot[self.edges[i][0]],
                                          objects_one_hot[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
@@ -265,7 +270,7 @@ class RnSemantic:
         self.actor = RnActor(self.nb_objects, self.edges, self.incoming_edges, self.predicate_ids, self.dim_body, self.dim_object, 
                               dim_mp_actor_input, dim_mp_actor_output, dim_rho_actor_input, dim_rho_actor_output)
         
-        self.value_network = RnGoalValue(self.nb_objects, self.edges, self.incoming_edges, self.predicate_ids)
+        self.value_network = RnGoalValue(self.nb_objects, self.edges, self.incoming_edges, self.predicate_ids, args.cuda)
 
     def policy_forward_pass(self, obs, ag, g, no_noise=False):
         if not no_noise:
