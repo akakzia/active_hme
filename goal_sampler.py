@@ -90,3 +90,28 @@ class GoalSampler:
         for g_id in np.arange(1, len(av_res) + 1):
             self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
             self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
+
+    def generate_buckets(self, normalized_goal_values, granularity, equal_goal_repartition=False):
+
+        #verify that we have as many goals in the goals values list as discovered goals
+        assert len(normalized_goal_values) == len(self.discovered_goals)
+
+        #verify that all values sum to 1
+        assert (np.array(normalized_goal_values) <= 1.).any()
+
+        intervals = np.linspace(0., 1., num=granularity+1)[1:] # remove the first item as the 0 is not useful
+
+        if equal_goal_repartition:
+            argsort = np.argsort(normalized_goal_values) # indexes of sorted array of goal values
+            equal_split = np.array_split(argsort, granularity) # split it into equal length arrays
+            self.goal_buckets = np.zeros(len(self.discovered_goals), dtype=int)
+            # retrieve bucket index from split
+            for bucket_id, bucket in enumerate(equal_split):
+                for goal in bucket:
+                    self.goal_buckets[goal] = bucket_id
+
+        else:
+            # split goals values in the intervals
+            self.goal_buckets = np.searchsorted(intervals, normalized_goal_values)
+
+        return self.goal_buckets
