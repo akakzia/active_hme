@@ -62,9 +62,9 @@ def launch(args):
     ### GENERATE BUCKET METHOD TESTING ###
     print('GENERATE BUCKET METHOD TESTING')
 
-    goal_sampler.discovered_goals = [3,25,21,2,255,22]
+    goal_sampler.discovered_goals = np.array([3,25,21,2,255,22])
 
-    goals_values = [0.3,0.1,0.5,0.8,0.9,0.2]
+    goals_values = np.array([0.3,0.1,0.5,0.8,0.9,0.2])
 
     print('Goal values: ', goals_values)
 
@@ -102,7 +102,7 @@ def launch(args):
     ### GOAL EVALUATOR TESTING ###
     print('GOAL EVALUATOR TESTING')
 
-    goal_sampler.discovered_goals = [3,25,21,2,255,22]
+    goal_sampler.discovered_goals = np.array([3,25,21,2,255,22])
 
     goals_values = goal_sampler.goal_evaluator.estimate_goal_value(goal_sampler.discovered_goals)
 
@@ -111,6 +111,14 @@ def launch(args):
     print('Buckets with equal repartition: ', goal_sampler.generate_buckets(goals_values, 3, equal_goal_repartition=True))
 
     print('###########################################################')
+
+    ### EVALUTE BUCKET TESTING ###
+
+    goal_sampler.discovered_goals = np.array([3,25,21,2,255,22])
+    goals_values = goal_sampler.goal_evaluator.estimate_goal_value(goal_sampler.discovered_goals)
+    goal_sampler.generate_buckets(goals_values, 3, equal_goal_repartition=True)
+
+    print('Buckets evaluation: ', goal_sampler.evaluate_buckets())
 
 
 

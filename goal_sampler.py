@@ -118,3 +118,17 @@ class GoalSampler:
             self.goal_buckets = np.searchsorted(intervals, normalized_goal_values)
 
         return self.goal_buckets
+
+
+    def evaluate_buckets(self):
+
+        self.buckets_mean_value = []
+
+        # retrieve goals from buckets, evaluate and average
+        for bucket in range(np.max(self.goal_buckets)):
+            goals_of_this_bucket = self.discovered_goals[np.where(self.goal_buckets == bucket)[0]]
+            bucket_mean_value = np.mean(self.goal_evaluator.estimate_goal_value(goals_of_this_bucket))
+            self.buckets_mean_value.append(bucket_mean_value)
+
+
+        return self.buckets_mean_value
