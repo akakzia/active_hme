@@ -1,6 +1,7 @@
 import numpy as np
 from utils import get_idxs_per_relation
 from mpi4py import MPI
+from goal_evaluator import GoalEvaluator
 
 
 class GoalSampler:
@@ -15,6 +16,8 @@ class GoalSampler:
         self.discovered_goals_str = []
 
         self.init_stats()
+
+        self.goal_evaluator = GoalEvaluator(args.goal_evaluator_method)
 
     def sample_goal(self, n_goals, evaluation):
         """

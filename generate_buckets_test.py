@@ -56,7 +56,11 @@ def launch(args):
     goal_sampler = GoalSampler(args)
 
 
+    print('###########################################################')
+
+
     ### GENERATE BUCKET METHOD TESTING ###
+    print('GENERATE BUCKET METHOD TESTING')
 
     goal_sampler.discovered_goals = [3,25,21,2,255,22]
 
@@ -74,7 +78,10 @@ def launch(args):
     print('Buckets without equal repartition: ', goal_sampler.generate_buckets(goals_values, 3))
     print('Buckets with equal repartition: ', goal_sampler.generate_buckets(goals_values, 3, equal_goal_repartition=True))
 
+    print('###########################################################')
+
     ### GENERATE BUCKET METHOD COMPUTATION TIME ###
+    print('GENERATE BUCKET METHOD COMPUTATION TIME')
 
     goal_sampler.discovered_goals = np.zeros(70000)
 
@@ -89,6 +96,21 @@ def launch(args):
     time_0 = time.time()
     print('Buckets with equal repartition: ', goal_sampler.generate_buckets(goals_values, 3, equal_goal_repartition=True))
     print('Computation time: ', time.time() - time_0)
+
+    print('###########################################################')
+
+    ### GOAL EVALUATOR TESTING ###
+    print('GOAL EVALUATOR TESTING')
+
+    goal_sampler.discovered_goals = [3,25,21,2,255,22]
+
+    goals_values = goal_sampler.goal_evaluator.estimate_goal_value(goal_sampler.discovered_goals)
+
+    print('Random goal evaluation on all discovered goals: ', goals_values)
+    print('Buckets without equal repartition: ', goal_sampler.generate_buckets(goals_values, 3))
+    print('Buckets with equal repartition: ', goal_sampler.generate_buckets(goals_values, 3, equal_goal_repartition=True))
+
+    print('###########################################################')
 
 
 
