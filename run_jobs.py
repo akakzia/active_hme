@@ -48,7 +48,7 @@ for i in range(nb_seeds):
                 fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
                 fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-                fh.writelines(f"srun python -u -B train.py --algo 'semantic' --n-blocks 5 --n-epochs 1000 --n-cycles 50 --n-batches 30 --architecture 'relation_network' --save-dir '{study}_{strategy}_{replay_k}/' 2>&1 ")
+                fh.writelines(f"srun python -u -B train.py --algo 'semantic' --n-blocks 5 --n-epochs 1000 --n-cycles 50 --n-batches 30 --replay-strategy {strategy} --replay-k {replay_k} --architecture 'relation_network' --save-dir '{study}_{strategy}_{replay_k}/' 2>&1 ")
 
             os.system("sbatch %s" % job_file)
             sleep(1)
