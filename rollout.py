@@ -16,12 +16,11 @@ def at_least_one_fallen(observation, n):
 
 
 class RolloutWorker:
-    def __init__(self, env, policy, goal_sampler, args):
+    def __init__(self, env, policy, args):
 
         self.env = env
         self.policy = policy
         self.env_params = args.env_params
-        self.goal_sampler = goal_sampler
         self.args = args
 
     def generate_rollout(self, goals, true_eval, animated=False):

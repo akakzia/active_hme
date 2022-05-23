@@ -62,7 +62,7 @@ def launch(args):
         raise NotImplementedError
 
     # Initialize Rollout Worker
-    rollout_worker = RolloutWorker(env, policy, goal_sampler,  args)
+    rollout_worker = RolloutWorker(env, policy, args)
 
     # Main interaction loop
     episode_count = 0
