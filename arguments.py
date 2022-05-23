@@ -56,6 +56,9 @@ def get_args():
     # the testing arguments
     parser.add_argument('--n-test-rollouts', type=int, default=1, help='the number of tests')
 
+    # the goal evaluator arguments
+    parser.add_argument('--goal-evaluator-method', type=int, default=1, help='either 1 (neural net estimation) or 2 (policy evaluation)')
+
     args = parser.parse_args()
 
     return args

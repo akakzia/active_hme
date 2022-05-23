@@ -1,6 +1,7 @@
 import numpy as np
 from utils import get_idxs_per_relation
 from mpi4py import MPI
+from goal_evaluator import GoalEvaluator
 
 
 class GoalSampler:
@@ -15,6 +16,8 @@ class GoalSampler:
         self.discovered_goals_str = []
 
         self.init_stats()
+
+        self.goal_evaluator = GoalEvaluator(args.goal_evaluator_method)
 
     def sample_goal(self, n_goals, evaluation):
         """
@@ -90,3 +93,42 @@ class GoalSampler:
         for g_id in np.arange(1, len(av_res) + 1):
             self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
             self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
+
+    def generate_buckets(self, normalized_goal_values, granularity, equal_goal_repartition=False):
+
+        #verify that we have as many goals in the goals values list as discovered goals
+        assert len(normalized_goal_values) == len(self.discovered_goals)
+
+        #verify that all values sum to 1
+        assert (np.array(normalized_goal_values) <= 1.).any()
+
+        intervals = np.linspace(0., 1., num=granularity+1)[1:] # remove the first item as the 0 is not useful
+
+        if equal_goal_repartition:
+            argsort = np.argsort(normalized_goal_values) # indexes of sorted array of goal values
+            equal_split = np.array_split(argsort, granularity) # split it into equal length arrays
+            self.goal_buckets = np.zeros(len(self.discovered_goals), dtype=int)
+            # retrieve bucket index from split
+            for bucket_id, bucket in enumerate(equal_split):
+                for goal in bucket:
+                    self.goal_buckets[goal] = bucket_id
+
+        else:
+            # split goals values in the intervals
+            self.goal_buckets = np.searchsorted(intervals, normalized_goal_values)
+
+        return self.goal_buckets
+
+
+    def evaluate_buckets(self):
+
+        self.buckets_mean_value = []
+
+        # retrieve goals from buckets, evaluate and average
+        for bucket in range(np.max(self.goal_buckets)):
+            goals_of_this_bucket = self.discovered_goals[np.where(self.goal_buckets == bucket)[0]]
+            bucket_mean_value = np.mean(self.goal_evaluator.estimate_goal_value(goals_of_this_bucket))
+            self.buckets_mean_value.append(bucket_mean_value)
+
+
+        return self.buckets_mean_value
