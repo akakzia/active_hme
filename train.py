@@ -47,7 +47,7 @@ def launch(args):
 
     # get saving paths
     if rank == 0:
-        logdir, model_path = init_storage(args)
+        logdir, model_path, bucket_path = init_storage(args)
         logger.configure(dir=logdir)
         logger.info(vars(args))
 
@@ -63,6 +63,12 @@ def launch(args):
 
     # Initialize Rollout Worker
     rollout_worker = RolloutWorker(env, policy, args)
+
+    # Sets the goal_evaluator estimator inside the goal sampler
+    if args.goal_evaluator_method == 1:
+        goal_sampler.setup_policy(policy)
+    else:
+        raise NotImplementedError('Only method 1 is implemented, please make sure you want to run method 2')
 
     # Main interaction loop
     episode_count = 0
@@ -144,14 +150,11 @@ def launch(args):
                                                        true_eval=True,  # this is offline evaluations
                                                        )
 
-            # Generate values for goals
-            goal_values = policy.get_goal_values(eval_goals)
 
             results = np.array([e['success'][-1].astype(np.float32) for e in episodes])
             rewards = np.array([e['rewards'][-1] for e in episodes])
             all_results = MPI.COMM_WORLD.gather(results, root=0)
             all_rewards = MPI.COMM_WORLD.gather(rewards, root=0)
-            all_goal_values = MPI.COMM_WORLD.gather(goal_values, root=0)
             time_dict['eval'] += time.time() - t_i
 
             # Logs
@@ -160,14 +163,17 @@ def launch(args):
                 av_res = np.array(all_results).mean(axis=0)
                 av_rewards = np.array(all_rewards).mean(axis=0)
                 global_sr = np.mean(av_res)
-                av_goal_values = np.array(all_goal_values).mean(axis=0)
-                for i in range(len(av_goal_values)):
-                    logger.record_tabular(f'value_{i+1}', av_goal_values[i])
-
+                if goal_sampler.active_buckets_ids is not None:
+                    logger.record_tabular('_nb_buckets', len(goal_sampler.active_buckets_ids))
+                    for i, b in enumerate(goal_sampler.active_buckets_ids):
+                        logger.record_tabular(f'_size_bucket_{i}', len(goal_sampler.buckets[b]))
+                        logger.record_tabular(f'_lp_{i}', goal_sampler.lp[i])
+                        logger.record_tabular(f'_p_{i}', goal_sampler.p[i])
                 log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:
                     policy.save(model_path, epoch)
+                    goal_sampler.save_bucket_contents(bucket_path, epoch)
                 if rank==0: logger.info('\tEpoch #{}: SR: {}'.format(epoch, global_sr))
 
 
