@@ -61,6 +61,7 @@ def get_args():
     parser.add_argument('--start-curriculum-k', type=int, default=1000, help='Start generate buckets after k episodes')
     parser.add_argument('--bucket-generation-freq', type=int, default=200, help='Generate buckets every n episodes')
     parser.add_argument('--bucket-evaluation-freq', type=int, default=100, help='Evaluate values of goals every m episodes')
+    parser.add_argument('--granularity', type=int, default=3, help='Maximum number of buckets that can be created')
     parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
 
     args = parser.parse_args()

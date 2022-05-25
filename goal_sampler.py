@@ -33,6 +33,7 @@ class GoalSampler:
         self.buckets = None
         self.active_buckets_ids = None
         self.goal_buckets = None
+        self.granularity = args.granularity
 
         # Define curriculum attributres
         self.values = None
@@ -96,7 +97,7 @@ class GoalSampler:
                 self.value_estimations_list = [norm_values]
 
                 # Then, generate buckets based on the normalized goal values
-                self.buckets = self.generate_buckets(normalized_goal_values=norm_values, granularity=3, equal_goal_repartition=False)
+                self.buckets = self.generate_buckets(normalized_goal_values=norm_values, granularity=self.granularity, equal_goal_repartition=False)
 
                 # Compute values per bucket
                 self.values = [self.evaluate_buckets()]
