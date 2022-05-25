@@ -29,10 +29,10 @@ for s in range(nb_seeds):
                     with open(job_file, 'w') as fh:
                         fh.writelines("#!/bin/bash\n")
                         fh.writelines("#SBATCH --account=kcr@v100\n")
-                        fh.writelines(f"#SBATCH --job-name=method={methods}_granularity={granularity}_norm={norm_tech}_startk={start_k}\n")
+                        fh.writelines(f"#SBATCH --job-name=method={method}_granularity={granularity}_norm={norm_tech}_startk={start_k}\n")
                         fh.writelines("#SBATCH --qos=qos_gpu-t3\n")
-                        fh.writelines(f"#SBATCH --output=method={methods}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%_%j.out\n")
-                        fh.writelines(f"#SBATCH --error=method={methods}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%_%j.out\n")
+                        fh.writelines(f"#SBATCH --output=method={method}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%_%j.out\n")
+                        fh.writelines(f"#SBATCH --error=method={method}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%_%j.out\n")
                         fh.writelines("#SBATCH --time=19:59:59\n")
                         fh.writelines("#SBATCH --ntasks=24\n")
                         fh.writelines("#SBATCH --ntasks-per-node=1\n")
@@ -51,7 +51,7 @@ for s in range(nb_seeds):
                         fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
                         fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-                        fh.writelines(f"srun python -u -B train.py --goal-evaluator-method {method} --start-curriculum-k {start_k} --granularity {granularity} --normalization-technique {norm_tech} --save-dir 'method={methods}_granularity={granularity}_norm={norm_tech}_startk={start_k}/' 2>&1 ")
+                        fh.writelines(f"srun python -u -B train.py --goal-evaluator-method {method} --start-curriculum-k {start_k} --granularity {granularity} --normalization-technique {norm_tech} --save-dir 'method={method}_granularity={granularity}_norm={norm_tech}_startk={start_k}/' 2>&1 ")
 
                     os.system("sbatch %s" % job_file)
                     sleep(1)
