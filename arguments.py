@@ -63,6 +63,7 @@ def get_args():
     parser.add_argument('--bucket-evaluation-freq', type=int, default=100, help='Evaluate values of goals every m episodes')
     parser.add_argument('--granularity', type=int, default=3, help='Maximum number of buckets that can be created')
     parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
+    parser.add_argument('--epsilon-curriculum', type=float, default=0.1, help='Probability to perform random exploration of discovered goals')
 
     args = parser.parse_args()
 

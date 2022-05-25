@@ -39,6 +39,7 @@ class GoalSampler:
         self.values = None
         self.lp = None
         self.p = None
+        self.epsilon = args.epsilon_curriculum
 
         # Initialize value estimations list
         self.value_estimations_list = []
@@ -63,7 +64,7 @@ class GoalSampler:
             if len(self.discovered_goals) == 0:
                 goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
             else:
-                if self.values is not None:
+                if self.values is not None and np.random.uniform() > self.epsilon:
                     # if buckets's values are estimated, then use curriculum to sample
                     buckets = np.random.choice(self.active_buckets_ids, p=self.p, size=n_goals)
 
@@ -198,8 +199,10 @@ class GoalSampler:
             goal_ids.append(np.random.choice(self.buckets[b]))
         assert len(goal_ids) == batch_size
 
-        # goal_ids = np.random.choice(np.arange(len(self.discovered_goals)), size=batch_size)
-        return goal_ids
+        # Check whether or not to perform prioritized replay using curriculum learning 
+        # If true, this will ignore the generated goal ids
+        prioritized_replay = np.random.uniform() > self.epsilon
+        return goal_ids, prioritized_replay
 
     def init_stats(self):
         self.stats = dict()
