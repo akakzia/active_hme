@@ -47,6 +47,9 @@ class GoalSampler:
         # Initialize goal_evaluator
         self.goal_evaluator = GoalEvaluator(args)
 
+        # Cycle counter
+        self.n_cycles = 0
+
         self.init_stats()
     
     def setup_policy(self, policy):
@@ -87,9 +90,9 @@ class GoalSampler:
         # Update the goal memory
         self.update_goal_memory(episodes)
 
-        do_curriculum = (t > self.start_curriculum_k)
-        do_bucket_generation = (t % self.bucket_generation_freq == 0)
-        do_bucket_evaluation = (t % self.bucket_evaluation_freq == 0)
+        do_curriculum = (self.n_cycles > self.start_curriculum_k)
+        do_bucket_generation = (self.n_cycles % self.bucket_generation_freq == 0)
+        do_bucket_evaluation = (self.n_cycles % self.bucket_evaluation_freq == 0)
         if do_curriculum:
             assert len(self.discovered_goals) > 0, 'Attempting to perform curriculum while nothing is discovered yet !'
             if do_bucket_generation:
@@ -118,6 +121,8 @@ class GoalSampler:
                 self.update_lp()
             
             self.sync_curriculum()
+
+        self.n_cycles += 1
 
         return episodes
     
