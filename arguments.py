@@ -28,7 +28,7 @@ def get_args():
     # the replay arguments
     parser.add_argument('--multi-criteria-her', type=bool, default=True, help='test')
     parser.add_argument('--replay-strategy', type=str, default='future', help='the HER strategy')
-    parser.add_argument('--replay-k', type=int, default=4, help='ratio to be replace')
+    parser.add_argument('--replay-k', type=int, default=1, help='ratio to be replace')
     parser.add_argument('--reward-type', type=str, default='per_object', help='per_object, per_relation, per_predicate or sparse')
     # The RL arguments
     parser.add_argument('--self-eval-prob', type=float, default=0.1, help='Probability to perform self-evaluation')
@@ -55,6 +55,15 @@ def get_args():
     parser.add_argument('--architecture', type=str, default='relation_network', help='[full_gn, interaction_network, relation_network, deep_sets, flat]')
     # the testing arguments
     parser.add_argument('--n-test-rollouts', type=int, default=1, help='the number of tests')
+
+    # the goal evaluator arguments
+    parser.add_argument('--goal-evaluator-method', type=int, default=1, help='either 1 (neural net estimation) or 2 (policy evaluation)')
+    parser.add_argument('--start-curriculum-k', type=int, default=1000, help='Start generate buckets after k episodes')
+    parser.add_argument('--bucket-generation-freq', type=int, default=200, help='Generate buckets every n episodes')
+    parser.add_argument('--bucket-evaluation-freq', type=int, default=100, help='Evaluate values of goals every m episodes')
+    parser.add_argument('--granularity', type=int, default=3, help='Maximum number of buckets that can be created')
+    parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
+    parser.add_argument('--epsilon-curriculum', type=float, default=0.1, help='Probability to perform random exploration of discovered goals')
 
     args = parser.parse_args()
 

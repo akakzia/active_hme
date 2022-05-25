@@ -1,6 +1,8 @@
 import threading
 import numpy as np
 
+from goal_sampler import GoalSampler
+
 """
 the replay buffer here is basically from the openai baselines code
 
@@ -44,13 +46,37 @@ class ReplayBuffer:
                 self.buffer['ag'][idxs[i]] = e['ag']
                 self.buffer['g'][idxs[i]] = e['g']
                 self.buffer['actions'][idxs[i]] = e['act']
+                self.goal_ids[idxs[i]] = e['last_ag_oracle_id']
 
     # sample the data from the replay buffer
     def sample(self, batch_size):
         temp_buffers = {}
         with self.lock:
-            for key in self.buffer.keys():
-                temp_buffers[key] = self.buffer[key][:self.current_size]
+            if self.goal_sampler.active_buckets_ids is not None:
+                # Compute goal id proportions with respect to LP probas
+                goal_ids, prioritized_replay = self.goal_sampler.build_batch(batch_size)    
+
+                if prioritized_replay:
+                    # If a goal id is not in the buffer then pick a random episode instead
+                    # This should not happen when discovered goals are configuration achieved at the end of episodes
+                    buffer_ids = []
+                    for g in goal_ids:
+                        buffer_ids_g = np.argwhere(self.goal_ids == g).flatten()
+                        if buffer_ids_g.size == 0:
+                            buffer_ids.append(np.random.choice(range(self.current_size)))
+                        else:
+                            buffer_ids.append(np.random.choice(buffer_ids_g))
+                    buffer_ids = np.array(buffer_ids)
+                    for key in self.buffer.keys():
+                        temp_buffers[key] = self.buffer[key][buffer_ids]
+                else:
+                    # Sample uniformly from replay buffer
+                    for key in self.buffer.keys():
+                        temp_buffers[key] = self.buffer[key][:self.current_size]
+
+            else:
+                for key in self.buffer.keys():
+                    temp_buffers[key] = self.buffer[key][:self.current_size]
 
         temp_buffers['obs_next'] = temp_buffers['obs'][:, 1:, :]
         temp_buffers['ag_next'] = temp_buffers['ag'][:, 1:, :]

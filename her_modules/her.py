@@ -29,6 +29,7 @@ class her_sampler:
         t_samples = np.random.randint(T, size=batch_size)
         transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys()}
 
+        transitions['anchor_g'] = transitions['g'].copy()
         # her idx
         if self.multi_criteria_her:
             for sub_goal in self.semantic_ids:
@@ -62,6 +63,9 @@ class her_sampler:
             # to get the params to re-compute reward
         transitions['r'] = np.expand_dims(np.array([self.compute_reward_masks(ag_next, g) for ag_next, g in zip(transitions['ag_next'],
                                                     transitions['g'])]), 1)
+        
+        transitions['anchor_r'] = np.expand_dims(np.array([self.compute_reward_masks(ag_next, g) for ag_next, g in zip(transitions['ag_next'],
+                                                    transitions['anchor_g'])]), 1)
 
         return transitions
 
