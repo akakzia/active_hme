@@ -28,7 +28,7 @@ def get_args():
     # the replay arguments
     parser.add_argument('--multi-criteria-her', type=bool, default=True, help='test')
     parser.add_argument('--replay-strategy', type=str, default='future', help='the HER strategy')
-    parser.add_argument('--replay-k', type=int, default=4, help='ratio to be replace')
+    parser.add_argument('--replay-k', type=int, default=1, help='ratio to be replace')
     parser.add_argument('--reward-type', type=str, default='per_object', help='per_object, per_relation, per_predicate or sparse')
     # The RL arguments
     parser.add_argument('--self-eval-prob', type=float, default=0.1, help='Probability to perform self-evaluation')
