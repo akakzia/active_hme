@@ -58,9 +58,9 @@ def get_args():
 
     # the goal evaluator arguments
     parser.add_argument('--goal-evaluator-method', type=int, default=1, help='either 1 (neural net estimation) or 2 (policy evaluation)')
-    parser.add_argument('--start-curriculum-k', type=int, default=1000, help='Start generate buckets after k episodes')
-    parser.add_argument('--bucket-generation-freq', type=int, default=200, help='Generate buckets every n episodes')
-    parser.add_argument('--bucket-evaluation-freq', type=int, default=100, help='Evaluate values of goals every m episodes')
+    parser.add_argument('--start-curriculum-k', type=int, default=500, help='Start generate buckets after k cycles')
+    parser.add_argument('--bucket-generation-freq', type=int, default=250, help='Generate buckets every n cycles')
+    parser.add_argument('--bucket-evaluation-freq', type=int, default=50, help='Evaluate values of goals every m cycles')
     parser.add_argument('--granularity', type=int, default=3, help='Maximum number of buckets that can be created')
     parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
     parser.add_argument('--epsilon-curriculum', type=float, default=0.1, help='Probability to perform random exploration of discovered goals')
