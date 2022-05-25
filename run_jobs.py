@@ -25,7 +25,7 @@ for i in range(nb_seeds):
             for granularity in granularities:
                 for norm_tech in norm_techniques:
                     for start_k in start_ks:
-                        job_file = os.path.join(job_directory, f"method={methods}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%.slurm")
+                        job_file = os.path.join(job_directory, f"method={method}_granularity={granularity}_norm={norm_tech}_startk={start_k}_%.slurm")
 
                         with open(job_file, 'w') as fh:
                             fh.writelines("#!/bin/bash\n")
