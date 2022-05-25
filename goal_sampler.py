@@ -8,7 +8,7 @@ import pickle
 
 
 class GoalSampler:
-    def __init__(self, args):
+    def __init__(self, args, stacks_to_class):
         self.num_rollouts_per_mpi = args.num_rollouts_per_mpi
         self.rank = MPI.COMM_WORLD.Get_rank()
 
@@ -49,6 +49,10 @@ class GoalSampler:
 
         # Cycle counter
         self.n_cycles = 0
+
+        self.stacks_to_class = stacks_to_class
+        self.discovered_goals_per_stacks = {e:0 for e in set(self.stacks_to_class.values())}
+        self.discovered_goals_per_stacks['others'] = 0 # for goals that are not in the stack classes
 
         self.init_stats()
     
@@ -165,6 +169,14 @@ class GoalSampler:
                     self.discovered_goals_str.append(str(last_ag))
                     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
 
+                    # Check to which stack class corresponds the discovered goal
+                    above_predicates = last_ag[10:]
+                    try:
+                        c = self.stacks_to_class[str(above_predicates)]
+                        self.discovered_goals_per_stacks[c] += 1
+                    except KeyError:
+                        self.discovered_goals_per_stacks['others'] += 1
+
                     # Fill bidict
                     self.goal_str_to_oracle_id[str(last_ag)] = self.nb_discovered_goals
 
@@ -219,6 +231,14 @@ class GoalSampler:
         for i in np.arange(1, n+1):
             self.stats['Eval_SR_{}'.format(i)] = []
             self.stats['Av_Rew_{}'.format(i)] = []
+        
+        # Init for each stack class
+        stack_classes = set(self.stacks_to_class.values())
+        for c in stack_classes:
+            self.stats[f'discovered_{c}'] = []
+        # Add class that contains all goals that do not correspond to the stack_classes
+        self.stats['discovered_others'] = []
+
         self.stats['epoch'] = []
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
@@ -239,45 +259,8 @@ class GoalSampler:
             self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
             self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
 
-    # def generate_buckets(self, normalized_goal_values, granularity, equal_goal_repartition=False):
-
-    #     #verify that we have as many goals in the goals values list as discovered goals
-    #     assert len(normalized_goal_values) == len(self.discovered_goals)
-
-    #     #verify that all values sum to 1
-    #     assert (np.array(normalized_goal_values) <= 1.).any()
-
-    #     intervals = np.linspace(0., 1., num=granularity+1)[1:] # remove the first item as the 0 is not useful
-
-    #     if equal_goal_repartition:
-    #         argsort = np.argsort(normalized_goal_values) # indexes of sorted array of goal values
-    #         equal_split = np.array_split(argsort, granularity) # split it into equal length arrays
-    #         self.goal_buckets = np.zeros(len(self.discovered_goals), dtype=int)
-    #         # retrieve bucket index from split
-    #         for bucket_id, bucket in enumerate(equal_split):
-    #             for goal in bucket:
-    #                 self.goal_buckets[goal] = bucket_id
-
-    #     else:
-    #         # split goals values in the intervals
-    #         self.goal_buckets = np.searchsorted(intervals, normalized_goal_values)
-
-    #     self.active_buckets_ids = np.unique(self.goal_buckets)
-    #     return self.goal_buckets
-
-
-    # def evaluate_buckets(self):
-
-    #     self.buckets_mean_value = []
-
-    #     # retrieve goals from buckets, evaluate and average
-    #     for bucket in range(np.max(self.goal_buckets)):
-    #         goals_of_this_bucket = self.discovered_goals[np.where(self.goal_buckets == bucket)[0]]
-    #         bucket_mean_value = np.mean(self.goal_evaluator.estimate_goal_value(goals_of_this_bucket))
-    #         self.buckets_mean_value.append(bucket_mean_value)
-
-
-    #     return self.buckets_mean_value
+        for k, v in self.discovered_goals_per_stacks.items():
+            self.stats[f'discovered_{k}'].append(v)
 
     def generate_buckets(self, normalized_goal_values, granularity, equal_goal_repartition=False):
 
