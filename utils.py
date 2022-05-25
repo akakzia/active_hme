@@ -388,3 +388,21 @@ def get_eval_goals(instruction, n, nb_goals=1):
         return np.array(res)
 
 
+def generate_stacks_dict(list_classes, n_blocks=5, n_trials=100):
+    """ Given a list of classes from SP, outputs a dictionary id_class -> partial goals that it contains """
+    n_combinations = int(n_blocks * (n_blocks - 1 ) / 2)
+    class_id_to_goals = {}
+    stacks_to_class_id = {}
+    for i, c in enumerate(list_classes):
+        eval_goals = []
+        for _ in range(n_trials):
+            eval_goal = get_eval_goals(c, n=n_blocks)
+            eval_goals.append(eval_goal.squeeze(0))
+        eval_goals = np.array(eval_goals)
+
+        unique_goals = np.unique(eval_goals, axis=0)
+        class_id_to_goals[i] = [str(e[n_combinations:]) for e in unique_goals]
+        for g in unique_goals:
+            stacks_to_class_id[str(g[n_combinations:])] = list_classes[i]
+
+    return stacks_to_class_id
