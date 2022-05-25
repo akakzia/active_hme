@@ -36,13 +36,13 @@ class GoalSampler:
         self.granularity = args.granularity
 
         # Define curriculum attributres
-        self.values = None
+        self.values_buckets = None
         self.lp = None
         self.p = None
         self.epsilon = args.epsilon_curriculum
 
         # Initialize value estimations list
-        self.value_estimations_list = []
+        self.values_goals = []
 
         # Initialize goal_evaluator
         self.goal_evaluator = GoalEvaluator(args)
@@ -64,7 +64,7 @@ class GoalSampler:
             if len(self.discovered_goals) == 0:
                 goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
             else:
-                if self.values is not None and np.random.uniform() > self.epsilon:
+                if self.values_buckets is not None and np.random.uniform() > self.epsilon:
                     # if buckets's values are estimated, then use curriculum to sample
                     buckets = np.random.choice(self.active_buckets_ids, p=self.p, size=n_goals)
 
@@ -95,13 +95,13 @@ class GoalSampler:
             if do_bucket_generation:
                 # First estimate and normalize goal values for all discovered goals
                 norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
-                self.value_estimations_list = [norm_values]
+                self.values_goals = [norm_values]
 
                 # Then, generate buckets based on the normalized goal values
                 self.buckets = self.generate_buckets(normalized_goal_values=norm_values, granularity=self.granularity, equal_goal_repartition=False)
 
                 # Compute values per bucket
-                self.values = [self.evaluate_buckets()]
+                self.values_buckets = [self.evaluate_buckets()]
 
                 # Compute LP
                 self.update_lp()
@@ -109,10 +109,10 @@ class GoalSampler:
             elif do_bucket_evaluation and self.goal_buckets is not None:
                 n_goals_in_buckets = len(self.goal_buckets)
                 value_estimations = self.goal_evaluator.estimate_goal_value(goals = np.array(self.discovered_goals[:n_goals_in_buckets])) 
-                self.value_estimations_list.append(value_estimations)
+                self.values_goals.append(value_estimations)
                 
                 # Computes values per bucket
-                self.values.append(self.evaluate_buckets())
+                self.values_buckets.append(self.evaluate_buckets())
 
                 # Compute LP
                 self.update_lp()
@@ -124,14 +124,14 @@ class GoalSampler:
     def update_lp(self):
         """ Updates the learning progress  """
         # If only one evaluation is conducted, then initialize sampling probabilities uniformly
-        assert len(self.values) > 0, 'Cannot perform LP updates unless goal values are estimated'
-        nb_buckets = len(self.values[0])
-        if len(self.values) == 1:
+        assert len(self.values_buckets) > 0, 'Cannot perform LP updates unless goal values are estimated'
+        nb_buckets = len(self.values_buckets[0])
+        if len(self.values_buckets) == 1:
             self.lp = np.zeros(nb_buckets)
             self.p = np.ones(nb_buckets) / nb_buckets
         else:
-            self.lp = np.abs(self.values[-1] - self.values[-2])
-            self.p = (1 - self.values[-1]) * self.lp / np.sum((1 - self.values[-1]) * self.lp)
+            self.lp = np.abs(self.values_buckets[-1] - self.values_buckets[-2])
+            self.p = (1 - self.values_buckets[-1]) * self.lp / np.sum((1 - self.values_buckets[-1]) * self.lp)
         
         if self.p.sum() > 1:
                 self.p[np.argmax(self.p)] -= self.p.sum() - 1
@@ -187,8 +187,8 @@ class GoalSampler:
         self.goal_buckets = MPI.COMM_WORLD.bcast(self.goal_buckets, root=0)
         self.buckets = MPI.COMM_WORLD.bcast(self.buckets, root=0)
         self.active_buckets_ids = MPI.COMM_WORLD.bcast(self.active_buckets_ids, root=0)
-        self.value_estimations_list = MPI.COMM_WORLD.bcast(self.value_estimations_list, root=0)
-        self.values = MPI.COMM_WORLD.bcast(self.values, root=0)
+        self.values_goals = MPI.COMM_WORLD.bcast(self.values_goals, root=0)
+        self.values_buckets = MPI.COMM_WORLD.bcast(self.values_buckets, root=0)
         self.lp = MPI.COMM_WORLD.bcast(self.lp, root=0)
         self.p = MPI.COMM_WORLD.bcast(self.p, root=0)
 
@@ -314,7 +314,7 @@ class GoalSampler:
         # retrieve goals from buckets, evaluate and average
         for bucket in self.active_buckets_ids:
             goal_ids = np.where(self.goal_buckets == bucket)[0]
-            bucket_mean_value = np.mean(self.value_estimations_list[-1][goal_ids])
+            bucket_mean_value = np.mean(self.values_goals[-1][goal_ids])
             self.buckets_mean_value.append(bucket_mean_value)
 
 
