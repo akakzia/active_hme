@@ -69,7 +69,7 @@ class GoalEvaluator():
         if self.normalization_technique == 'linear_fixed':
             max_value = 250
             min_value = 0
-            norm_goals = (goal_values - min_value)/(max_value - min_value)
+            norm_goals = np.clip((goal_values - min_value)/(max_value - min_value), a_min=0., a_max=1.)
         elif self.normalization_technique == 'linear_moving':
             max_value = np.max(goal_values, axis=0)
             min_value = np.min(goal_values, axis=0)
