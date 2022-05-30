@@ -67,8 +67,10 @@ def launch(args):
     # Sets the goal_evaluator estimator inside the goal sampler
     if args.goal_evaluator_method == 1:
         goal_sampler.setup_policy(policy)
+    elif args.goal_evaluator_method == 2:
+        goal_sampler.setup_rollout_worker(rollout_worker)
     else:
-        raise NotImplementedError('Only method 1 is implemented, please make sure you want to run method 2')
+        raise NotImplementedError
 
     # Main interaction loop
     episode_count = 0

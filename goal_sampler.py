@@ -56,6 +56,10 @@ class GoalSampler:
         """ Sets up the policy """
         self.goal_evaluator.setup_policy(policy)
 
+    def setup_rollout_worker(self, rollout_worker):
+        """ Sets up the rollout worker """
+        self.goal_evaluator.setup_rollout_worker(rollout_worker)
+
     def sample_goal(self, n_goals, evaluation):
         """
         Sample n_goals goals to be targeted during rollouts

@@ -1,6 +1,7 @@
 from cv2 import norm
 import torch
 import numpy as np
+from mpi4py import MPI
 
 
 class GoalEvaluator():
@@ -21,10 +22,15 @@ class GoalEvaluator():
 
             # add rollout_worker to estimate goal success rate
             self.rollout_worker = rollout_worker
+            self.rank = MPI.COMM_WORLD.Get_rank()
 
     def setup_policy(self, policy):
         """ Sets up the policy """
         self.policy = policy
+
+    def setup_rollout_worker(self, rollout_worker):
+        """ Sets up the rollout worker """
+        self.rollout_worker = rollout_worker
 
     def estimate_goal_value(self, goals):
 
@@ -34,13 +40,20 @@ class GoalEvaluator():
 
         if self.method == 2:
 
-            # add rollout on goals to estimate success rate
+            # evaluate policy on goals several time and average
+            goal_values = []
+            episodes = self.rollout_worker.generate_rollout(goals=np.array(goals), true_eval=True)
+            goal_values_per_worker = np.array([e['success'][-1].astype(np.float32) for e in episodes])
 
-            # temporary
-            goal_values = np.random.rand(len(goals))
+            all_goal_values = MPI.COMM_WORLD.gather(goal_values_per_worker, root=0)
+
+            if self.rank == 0:
+                goal_values = np.mean(all_goal_values, axis=0)
+
+            goal_values = MPI.COMM_WORLD.bcast(goal_values, root=0)
+
 
         # normalize goal values
-        # normalized_goal_values = goal_values/np.max(goal_values)
         norm_g_values = self.normalize_goal_values(goal_values)
 
         return norm_g_values
@@ -67,9 +80,12 @@ class GoalEvaluator():
         """ Use the selected normalization technique to normalize goals """
 
         if self.normalization_technique == 'linear_fixed':
-            max_value = 250
-            min_value = 0
-            norm_goals = (goal_values - min_value)/(max_value - min_value)
+            if self.method == 1:
+                max_value = 250
+                min_value = 0
+                norm_goals = (goal_values - min_value)/(max_value - min_value)
+            elif self.method == 2:
+                norm_goals = goal_values
         elif self.normalization_technique == 'linear_moving':
             max_value = np.max(goal_values, axis=0)
             min_value = np.min(goal_values, axis=0)
