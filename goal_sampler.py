@@ -71,18 +71,9 @@ class GoalSampler:
             if len(self.discovered_goals) == 0:
                 goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
             else:
-                if self.values_buckets is not None and np.random.uniform() > self.epsilon:
-                    # if buckets's values are estimated, then use curriculum to sample
-                    buckets = np.random.choice(self.active_buckets_ids, p=self.p, size=n_goals)
-
-                    goals = []
-                    for b in buckets:
-                        goals.append(np.array(self.discovered_goals)[np.random.choice(self.buckets[b])])
-                    goals = np.array(goals)
-                else:
-                    # sample uniformly from discovered goals
-                    goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
-                    goals = np.array(self.discovered_goals)[goal_ids]
+                # sample uniformly from discovered goals
+                goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
+                goals = np.array(self.discovered_goals)[goal_ids]
         return goals
 
     def update(self, episodes, t):
