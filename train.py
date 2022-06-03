@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from typing import DefaultDict
 from mpi4py import MPI
 import env
 import gym
@@ -9,18 +10,9 @@ from rl_modules.rl_agent import RLAgent
 import random
 from rollout import RolloutWorker
 from goal_sampler import GoalSampler
-from utils import init_storage, get_eval_goals, generate_stacks_dict
+from utils import get_env_params, init_storage, get_eval_goals, generate_stacks_dict
 import time
 from mpi_utils import logger
-
-def get_env_params(env):
-    obs = env.reset()
-
-    # close the environment
-    params = {'obs': obs['observation'].shape[0], 'goal': obs['desired_goal'].shape[0],
-              'action': env.action_space.shape[0], 'action_max': env.action_space.high[0],
-              'max_timesteps': env._max_episode_steps}
-    return params
 
 def launch(args):
     # Set cuda arguments to True
@@ -84,14 +76,7 @@ def launch(args):
         t_init = time.time()
 
         # setup time_tracking
-        time_dict = dict(goal_sampler=0,
-                         rollout=0,
-                         gs_update=0,
-                         store=0,
-                         norm_update=0,
-                         policy_train=0,
-                         eval=0,
-                         epoch=0)
+        time_dict = DefaultDict(int)
 
         # log current epoch
         if rank == 0: logger.info('\n\nEpoch #{}'.format(epoch))
