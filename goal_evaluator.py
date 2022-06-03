@@ -54,8 +54,8 @@ class GoalEvaluator():
         ag_tensor = torch.tensor(ag, dtype=torch.float32)
         g_tensor = torch.tensor(goals, dtype=torch.float32)
         if self.cuda:
-            ag_norm_tensor = ag_norm_tensor.cuda()
-            g_norm_tensor = g_norm_tensor.cuda()
+            ag_tensor = ag_tensor.cuda()
+            g_tensor = g_tensor.cuda()
         
         with torch.no_grad():
             self.policy.model.value_forward_pass(ag_tensor, g_tensor)
