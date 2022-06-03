@@ -27,7 +27,7 @@ register(id='FetchManipulate4Objects-v0',
 
 register(id='FetchManipulate5Objects-v0',
          entry_point='env.envs:FetchManipulateEnv',
-         kwargs={'reward_type': 'sparse',
+         kwargs={'reward_type': 'incremental',
                  'num_blocks': 5,
                  'model_path': 'fetch/stack5.xml'
                  },
