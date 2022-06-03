@@ -1,5 +1,5 @@
 import numpy as np
-
+from itertools import permutations, combinations
 from gym import error
 try:
     import mujoco_py
@@ -94,3 +94,9 @@ def reset_mocap2body_xpos(sim):
         assert (mocap_id != -1)
         sim.data.mocap_pos[mocap_id][:] = sim.data.body_xpos[body_idx]
         sim.data.mocap_quat[mocap_id][:] = sim.data.body_xquat[body_idx]
+
+def get_idxs_per_object(n):
+    """ For each objects, outputs the predicates indexes that include the corresponding object"""
+    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2))
+    obj_ids = np.arange(n)
+    return np.array([np.array([i for i in range(len(map_list)) if obj_id in map_list[i]]) for obj_id in obj_ids])

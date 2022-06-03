@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import itertools
+from env.utils import get_idxs_per_object
 
 from env import rotations, robot_env, utils
 
@@ -115,8 +116,15 @@ class FetchManipulateEnv(robot_env.RobotEnv):
     # ----------------------------
 
     def compute_reward(self, achieved_goal, goal, info):
-        assert self.reward_type  == 'sparse'
-        reward = (achieved_goal == goal).all().astype(np.float32)
+        assert self.reward_type  in ['sparse', 'incremental']
+        if self.reward_type == 'sparse':
+            reward = (achieved_goal == goal).all().astype(np.float32)
+        else:
+            semantic_ids = get_idxs_per_object(n=self.num_blocks)
+            reward = 0.
+            for subgoal in semantic_ids:
+                if (achieved_goal[subgoal] == goal[subgoal]).all():
+                    reward = reward + 1.
 
         return reward
 
