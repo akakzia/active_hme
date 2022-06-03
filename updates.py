@@ -134,7 +134,7 @@ def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha
         qf1_n_target, qf2_n_target = model.target_q1_pi_tensor, model.target_q2_pi_tensor
         min_qf_n_target = torch.min(qf1_n_target, qf2_n_target) - alpha * log_pi_n
         n_q_value = anchor_r_tensor + args.gamma * min_qf_n_target
-    v = model.value_forward_pass(anchor_g_norm_tensor)
+    v = model.value_forward_pass(ag_norm_tensor, anchor_g_norm_tensor)
     v_loss = F.mse_loss(v, n_q_value)
 
     # start to update the network

@@ -174,7 +174,7 @@ class RnGoalValue(nn.Module):
 
         self.nb_objects = nb_objects
 
-        dim_mp_input = 2 * self.nb_objects + 2 # 2 * object dim (one hot) + nb_predicates pair pair
+        dim_mp_input = 2 * (self.nb_objects + 2) # 2 * (object dim (one hot) + nb_predicates per pair)
         dim_mp_output = 3 * dim_mp_input
 
         dim_rho_value_input = dim_mp_output
@@ -193,10 +193,10 @@ class RnGoalValue(nn.Module):
 
         self.args_cuda = cuda
 
-    def forward(self, g):
+    def forward(self, ag, g):
         # Value message passing using node features, edge features and global features (here body + action)
         # Returns the edges features (which number is equal to the number of edges, i.e. permutations of objects)
-        edge_features = self.message_passing(g)
+        edge_features = self.message_passing(ag, g)
 
 
         # Perform pooling (self-attention) on the edge features
@@ -208,7 +208,7 @@ class RnGoalValue(nn.Module):
         v_tensor= self.rho_value(edge_features_attention)
         return v_tensor
 
-    def message_passing(self, g):
+    def message_passing(self, ag, g):
         batch_size = g.shape[0]
         objects_one_hot = [torch.Tensor([1., 0., 0., 0., 0.]), torch.Tensor([0., 1., 0., 0., 0.]), 
                            torch.Tensor([0., 0., 1., 0., 0.]), torch.Tensor([0., 0., 0., 1., 0.]), 
@@ -221,7 +221,7 @@ class RnGoalValue(nn.Module):
             # objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in F.one_hot(torch.arange(0, self.nb_objects) % self.nb_objects)]
             objects_one_hot = [e.unsqueeze(0).repeat(batch_size, 1) for e in objects_one_hot]
 
-        inp_mp = torch.stack([torch.cat([g[:, self.predicate_ids[i]], objects_one_hot[self.edges[i][0]],
+        inp_mp = torch.stack([torch.cat([ag[:, self.predicate_ids[i]], g[:, self.predicate_ids[i]], objects_one_hot[self.edges[i][0]],
                                          objects_one_hot[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
 
         output_mp_1 = self.mp_value_1(inp_mp)
@@ -297,7 +297,7 @@ class RnSemantic:
                 self.target_q1_pi_tensor, self.target_q2_pi_tensor = self.critic_target.forward(obs, self.pi_tensor, ag, g)
             self.q1_pi_tensor, self.q2_pi_tensor = None, None
     
-    def value_forward_pass(self, g):
-        self.value = self.value_network.forward(g)
+    def value_forward_pass(self, ag, g):
+        self.value = self.value_network.forward(ag, g)
 
         return self.value

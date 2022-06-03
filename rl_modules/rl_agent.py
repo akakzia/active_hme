@@ -230,7 +230,7 @@ class RLAgent:
 
     def save(self, model_path, epoch):
         torch.save([self.o_norm.mean, self.o_norm.std, self.g_norm.mean, self.g_norm.std,
-                    self.model.actor.state_dict(), self.model.critic.state_dict()],
+                    self.model.actor.state_dict(), self.model.critic.state_dict(), self.model.value_network.state_dict()],
                     model_path + '/model_{}.pt'.format(epoch))
 
     def load(self, model_path, args):

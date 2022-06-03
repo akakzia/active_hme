@@ -26,11 +26,13 @@ class GoalEvaluator():
         """ Sets up the policy """
         self.policy = policy
 
-    def estimate_goal_value(self, goals):
+    def estimate_goal_value(self, goals, ag=None):
 
         if self.method == 1:
+            # If no initial goals are given, then estimate value starting from all coplanar
+            ag = - np.ones(goals.shape).astype(np.float) if ag is None else ag
             # Use value neural estimator to get goal values
-            goal_values = self.forward_goal_values(goals)
+            goal_values = self.forward_goal_values(ag, goals)
 
         if self.method == 2:
 
@@ -45,17 +47,18 @@ class GoalEvaluator():
 
         return norm_g_values
     
-    def forward_goal_values(self, goals):
+    def forward_goal_values(self, ag, goals):
         """ Normalize, tensorize and forward goals through the goal value estimator """
         n_goals = goals.shape[0]
 
-        g_norm = self.policy.g_norm.normalize(goals)
-        g_norm_tensor = torch.tensor(g_norm, dtype=torch.float32)
+        ag_tensor = torch.tensor(ag, dtype=torch.float32)
+        g_tensor = torch.tensor(goals, dtype=torch.float32)
         if self.cuda:
+            ag_norm_tensor = ag_norm_tensor.cuda()
             g_norm_tensor = g_norm_tensor.cuda()
         
         with torch.no_grad():
-            self.policy.model.value_forward_pass(g_norm_tensor)
+            self.policy.model.value_forward_pass(ag_tensor, g_tensor)
         if self.cuda:
             values = self.policy.model.value.cpu().numpy()
         else:
