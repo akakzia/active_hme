@@ -177,7 +177,7 @@ class GoalSampler:
                         self.discovered_goals_per_stacks['others'] += 1
 
                     # Fill bidict
-                    self.goal_str_to_oracle_id[str(last_ag)] = self.nb_discovered_goals
+                    # self.goal_str_to_oracle_id[str(last_ag)] = self.nb_discovered_goals
 
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
@@ -185,10 +185,10 @@ class GoalSampler:
         self.sync()
 
         # Label each episode by its last achieved goal
-        for e in episodes:
-            last_ag = e['ag_binary'][-1]
-            oracle_id = self.goal_str_to_oracle_id[str(last_ag)]
-            e['last_ag_oracle_id'] = oracle_id
+        # for e in episodes:
+        #     last_ag = e['ag_binary'][-1]
+        #     oracle_id = self.goal_str_to_oracle_id[str(last_ag)]
+        #     e['last_ag_oracle_id'] = oracle_id
 
     def sync(self):
         """ Synchronize the goal sampler's attributes between all workers """
