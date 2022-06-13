@@ -415,3 +415,13 @@ def generate_stacks_dict(list_classes, n_blocks=5, n_trials=100):
             stacks_to_class_id[str(g[n_combinations:])] = list_classes[i]
 
     return stacks_to_class_id
+
+def generate_stacks_to_class():
+        """ Get evaluation map that correspond each goal to a class involving stacks, based only on the above predicates
+        This map ignores the close predicates
+        i.e. if there is only a stack of 2 blocks, we ignore the close predicates
+        This is used to check what types of goals the agent is discovering """
+        stacks_classes = ['stack_2', 'stack_3', '2stacks_2_2', '2stacks_2_3', 'pyramid_3', 'mixed_2_3', 'stack_4', 'stack_5']
+        stacks_to_class = generate_stacks_dict(list_classes=stacks_classes, n_blocks=5, n_trials=2000)
+
+        return stacks_to_class

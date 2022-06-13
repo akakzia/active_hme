@@ -10,7 +10,7 @@ from rl_modules.rl_agent import RLAgent
 import random
 from rollout import RolloutWorker
 from goal_sampler import GoalSampler
-from utils import get_env_params, init_storage, get_eval_goals, generate_stacks_dict
+from utils import get_env_params, init_storage, get_eval_goals
 import time
 from mpi_utils import logger
 
@@ -43,17 +43,9 @@ def launch(args):
         logger.configure(dir=logdir)
         logger.info(vars(args))
     
-    # Get evaluation map that correspond each goal to a class involving stacks, based only on the above predicates
-    # This map ignores the close predicates
-    # i.e. if there is only a stack of 2 blocks, we ignore the close predicates
-    # This is used to check what types of goals the agent is discovering
-    stacks_classes = ['stack_2', 'stack_3', '2stacks_2_2', '2stacks_2_3', 'pyramid_3', 'mixed_2_3', 'stack_4', 'stack_5']
-    stacks_to_class = generate_stacks_dict(list_classes=stacks_classes, n_blocks=5, n_trials=2000)
-    
     args.env_params = get_env_params(env)
 
-    # feed stacks_to_class to goal sampler to compute stats internally using the discovered goals
-    goal_sampler = GoalSampler(args, stacks_to_class)
+    goal_sampler = GoalSampler(args)
 
     # Initialize RL Agent
     if args.agent == "SAC":

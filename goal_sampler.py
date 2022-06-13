@@ -1,6 +1,6 @@
 from dis import dis
 import numpy as np
-from utils import get_idxs_per_relation
+from utils import generate_stacks_to_class
 from mpi4py import MPI
 from goal_evaluator import GoalEvaluator
 from bidict import bidict
@@ -8,7 +8,7 @@ import pickle
 
 
 class GoalSampler:
-    def __init__(self, args, stacks_to_class):
+    def __init__(self, args):
         self.num_rollouts_per_mpi = args.num_rollouts_per_mpi
         self.rank = MPI.COMM_WORLD.Get_rank()
 
@@ -50,7 +50,7 @@ class GoalSampler:
         # Cycle counter
         self.n_cycles = 0
 
-        self.stacks_to_class = stacks_to_class
+        self.stacks_to_class = generate_stacks_to_class()
         self.discovered_goals_per_stacks = {e:0 for e in set(self.stacks_to_class.values())}
         self.discovered_goals_per_stacks['others'] = 0 # for goals that are not in the stack classes
 
