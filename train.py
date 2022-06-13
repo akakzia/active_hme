@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from bidict import bidict
 from typing import DefaultDict
 from mpi4py import MPI
 import env
@@ -11,6 +12,9 @@ import random
 from rollout import RolloutWorker
 from goal_sampler import GoalSampler
 from utils import get_env_params, init_storage, get_eval_goals
+import networkit as nk
+from graph.semantic_graph import SemanticGraph
+from graph.agent_graph import AgentGraph
 import time
 from mpi_utils import logger
 
@@ -62,6 +66,12 @@ def launch(args):
     else:
         raise NotImplementedError('Only method 1 is implemented, please make sure you want to run method 2')
 
+    # Load oracle graph
+    nk_graph = nk.Graph(0,weighted=True, directed=True)
+    semantic_graph = SemanticGraph(bidict(),nk_graph,args.n_blocks,True,args=args)
+    agent_network = AgentGraph(semantic_graph,logdir,args)
+    agent_network.teacher.compute_frontier(agent_network.semantic_graph)
+
     # Main interaction loop
     episode_count = 0
     for epoch in range(args.n_epochs):
@@ -98,6 +108,11 @@ def launch(args):
             t_i = time.time()
             policy.store(episodes)
             time_dict['store'] += time.time() - t_i
+
+            # Agent Network Update : 
+            t_i = time.time()
+            agent_network.update(episodes)
+            time_dict['update_graph'] += time.time() - t_i
 
             # Updating observation normalization
             t_i = time.time()

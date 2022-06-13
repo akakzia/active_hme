@@ -66,6 +66,8 @@ def get_args():
     parser.add_argument('--epsilon-curriculum', type=float, default=0.1, help='Probability to perform random exploration of discovered goals')
     parser.add_argument('--use-stability-condition', type=bool, default=False, help='only consider stable goals as discovered')
     
+    parser.add_argument('--strategy', type=int, default=2, help='Possible values: 0: Frontier; 1: Frontier and Stop, 2: Frontier and Beyond'
+                                                                   '3: Beyond')
     args = parser.parse_args()
 
     return args
