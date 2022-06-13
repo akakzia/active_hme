@@ -64,7 +64,8 @@ def get_args():
     parser.add_argument('--granularity', type=int, default=3, help='Maximum number of buckets that can be created')
     parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
     parser.add_argument('--epsilon-curriculum', type=float, default=0.1, help='Probability to perform random exploration of discovered goals')
-
+    parser.add_argument('--use-stability-condition', type=bool, default=False, help='only consider stable goals as discovered')
+    
     args = parser.parse_args()
 
     return args

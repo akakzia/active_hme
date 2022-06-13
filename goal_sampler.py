@@ -54,6 +54,8 @@ class GoalSampler:
         self.discovered_goals_per_stacks = {e:0 for e in set(self.stacks_to_class.values())}
         self.discovered_goals_per_stacks['others'] = 0 # for goals that are not in the stack classes
 
+        self.use_stability_condition = args.use_stability_condition
+
         self.init_stats()
     
     def setup_policy(self, policy):
@@ -154,14 +156,19 @@ class GoalSampler:
             for e in all_episode_list:
                 # Retrive last achieved goal
                 last_ag = e['ag_binary'][-1]
-                # Compute boolean conditions to determine the discovered goal stability 
-                # 1: the goal is stable for the last 10 steps
-                condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag_binary'][-10:]]) == 10.
-                # 2: Gripper is far from all objects
-                last_obs = e['obs'][-1]
-                pos_gripper = last_obs[:3]
-                pos_objects = [last_obs[10 + 15 * i: 13 + 15 * i] for i in range(5)]
-                condition_far = np.sum([np.linalg.norm(pos_gripper - pos_ob) >= 0.09 for pos_ob in pos_objects]) == 5.
+                if self.use_stability_condition:
+                    # Compute boolean conditions to determine the discovered goal stability 
+                    # 1: the goal is stable for the last 10 steps
+                    condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag_binary'][-10:]]) == 10.
+                    # 2: Gripper is far from all objects
+                    last_obs = e['obs'][-1]
+                    pos_gripper = last_obs[:3]
+                    pos_objects = [last_obs[10 + 15 * i: 13 + 15 * i] for i in range(5)]
+                    condition_far = np.sum([np.linalg.norm(pos_gripper - pos_ob) >= 0.09 for pos_ob in pos_objects]) == 5.
+                else:
+                    # Always true
+                    condition_stability = True
+                    condition_far = True
                 # Add last achieved goal to memory if first time encountered
                 if str(last_ag) not in self.discovered_goals_str and condition_stability and condition_far:
                     self.discovered_goals.append(last_ag.copy())
