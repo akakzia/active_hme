@@ -155,11 +155,11 @@ class GoalSampler:
 
             for e in all_episode_list:
                 # Retrive last achieved goal
-                last_ag = e['ag_binary'][-1]
+                last_ag = e['ag'][-1]
                 if self.use_stability_condition:
                     # Compute boolean conditions to determine the discovered goal stability 
                     # 1: the goal is stable for the last 10 steps
-                    condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag_binary'][-10:]]) == 10.
+                    condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag'][-10:]]) == 10.
                     # 2: Gripper is far from all objects
                     last_obs = e['obs'][-1]
                     pos_gripper = last_obs[:3]
@@ -249,7 +249,7 @@ class GoalSampler:
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
         self.stats['nb_discovered'] = []
-        keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update',
+        keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:
             self.stats['t_{}'.format(k)] = []

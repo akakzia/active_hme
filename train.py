@@ -9,13 +9,14 @@ import os
 from arguments import get_args
 from rl_modules.rl_agent import RLAgent
 import random
-from rollout import RolloutWorker
+from rollout import HMERolloutWorker
 from goal_sampler import GoalSampler
 from utils import get_env_params, init_storage, get_eval_goals
 import networkit as nk
 from graph.semantic_graph import SemanticGraph
 from graph.agent_graph import AgentGraph
 import time
+import pickle as pkl
 from mpi_utils import logger
 
 def launch(args):
@@ -54,11 +55,12 @@ def launch(args):
     # Initialize RL Agent
     if args.agent == "SAC":
         policy = RLAgent(args, env.compute_reward, goal_sampler)
+        # policy.load('/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/value_network/agent_0/1/models/model_210.pt', args)
     else:
         raise NotImplementedError
 
     # Initialize Rollout Worker
-    rollout_worker = RolloutWorker(env, policy, args)
+    rollout_worker = HMERolloutWorker(env, policy, goal_sampler, args)
 
     # Sets the goal_evaluator estimator inside the goal sampler
     if args.goal_evaluator_method == 1:
@@ -70,7 +72,19 @@ def launch(args):
     nk_graph = nk.Graph(0,weighted=True, directed=True)
     semantic_graph = SemanticGraph(bidict(),nk_graph,args.n_blocks,True,args=args)
     agent_network = AgentGraph(semantic_graph,logdir,args)
-    agent_network.teacher.compute_frontier(agent_network.semantic_graph)
+    
+    # # Temporary load discovered goals 
+    # with open('/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/value_network/agent_0/1' + f'/buckets/discovered_g_ep_210.pkl', 'rb') as f:
+    #         data_discovered = pkl.load(file=f)
+    
+    # # Add them to graph
+    # for g in data_discovered:
+    #     agent_network.semantic_graph.create_node(tuple(g))
+    # agent_network.teacher.compute_frontier(agent_network.semantic_graph)
+    # print(f'Frontier {len(agent_network.teacher.agent_frontier)}')
+    # print(f'SS {len(agent_network.teacher.agent_stepping_stones)}')
+    # frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
+    # explore_goal = next(iter(agent_network.sample_from_frontier(frontier_ag[-1], 1)), None) 
 
     # Main interaction loop
     episode_count = 0
@@ -87,15 +101,18 @@ def launch(args):
         for _ in range(args.n_cycles):
 
             # Sample goals
-            t_i = time.time()
-            goals = goal_sampler.sample_goal(n_goals=args.num_rollouts_per_mpi, evaluation=False)
-            time_dict['goal_sampler'] += time.time() - t_i
+            # t_i = time.time()
+            # goals = goal_sampler.sample_goal(n_goals=args.num_rollouts_per_mpi, evaluation=False)
+            # time_dict['goal_sampler'] += time.time() - t_i
 
             # Environment interactions
             t_i = time.time()
-            episodes = rollout_worker.generate_rollout(goals=goals,  # list of goal configurations
-                                                       true_eval=False,  # these are not offline evaluation episodes
-                                                      )
+            # episodes = rollout_worker.generate_rollout(goals=goals,  # list of goal configurations
+            #                                            true_eval=False,  # these are not offline evaluation episodes
+            #                                           )
+            episodes = rollout_worker.train_rollout(agent_network= agent_network,
+                                                    t=epoch,
+                                                    time_dict=time_dict)
             time_dict['rollout'] += time.time() - t_i
 
             # Goal Sampler updates
