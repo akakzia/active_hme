@@ -14,7 +14,7 @@ scratch = os.environ['SCRATCH']
 mkdir_p(job_directory)
 
 methods = [1]
-granularities = [3, 4, 5]
+granularities = [5]
 norm_techniques = ['mixed']
 start_ks = [500] 
 nb_seeds = 1
