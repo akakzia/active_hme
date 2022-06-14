@@ -26,14 +26,24 @@ class her_sampler:
 
         # select which rollouts and which timesteps to be used
         episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)
+
+        # Exclude episode where no relabeling is needed
+        try:
+            no_relabel = np.where(episode_batch['her'] == 0.)[0]
+            if len(no_relabel) > 0:
+                stop = 1
+        except KeyError:
+            no_relabel = np.array([])
+
         t_samples = np.random.randint(T, size=batch_size)
-        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys()}
+        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys() if key!='her'}
 
         transitions['anchor_g'] = transitions['g'].copy()
         # her idx
         if self.multi_criteria_her:
             for sub_goal in self.semantic_ids:
-                her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)
+                her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)[0]
+                her_indexes = np.array([her_indexes[i] for i in range(len(her_indexes)) if episode_idxs[i] not in no_relabel])
 
                 # future goal selection
                 if self.replay_strategy == 'final':

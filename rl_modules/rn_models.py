@@ -72,9 +72,9 @@ class RnCritic(nn.Module):
         obs_objects = [obs[:, self.dim_body + self.dim_object * i: self.dim_body + self.dim_object * (i + 1)]
                        for i in range(self.nb_objects)]
 
-        delta_g = g
+        # delta_g = g - ag
 
-        inp_mp = torch.stack([torch.cat([obs_body, act, delta_g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
+        inp_mp = torch.stack([torch.cat([obs_body, act, ag[:, self.predicate_ids[i]], g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
                                          obs_objects[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
 
         output_mp_1 = self.mp_critic_1(inp_mp)
@@ -112,9 +112,9 @@ class RnActor(nn.Module):
         obs_objects = [obs[:, self.dim_body + self.dim_object * i: self.dim_body + self.dim_object * (i + 1)]
                        for i in range(self.nb_objects)]
 
-        delta_g = g
+        # delta_g = g - ag
 
-        inp_mp = torch.stack([torch.cat([obs_body, delta_g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
+        inp_mp = torch.stack([torch.cat([obs_body, ag[:, self.predicate_ids[i]], g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
                                          obs_objects[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
 
         output_mp_1 = self.mp_actor_1(inp_mp)
@@ -249,10 +249,10 @@ class RnSemantic:
         # Process indexes for graph construction
         self.edges, self.incoming_edges, self.predicate_ids = get_graph_structure(self.nb_objects)
 
-        dim_mp_actor_input = 2 * self.dim_object + 2 + self.dim_body # 2 * dim node + dim partial goal + dim global
+        dim_mp_actor_input = 2 * (self.dim_object + 2) + self.dim_body # 2 * dim node + dim partial goal + dim global
         dim_mp_actor_output = 3 * dim_mp_actor_input
 
-        dim_mp_critic_input = 2 * self.dim_object + 2 + (self.dim_body + self.dim_act) # 2 * dim node + dim partial goal + dim global
+        dim_mp_critic_input = 2 * (self.dim_object + 2) + (self.dim_body + self.dim_act) # 2 * dim node + dim partial goal + dim global
         dim_mp_critic_output = 3 * dim_mp_actor_input
 
         # dim_phi_actor_input = self.dim_body + self.dim_object + dim_mp_actor_output
