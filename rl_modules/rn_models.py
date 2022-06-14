@@ -72,7 +72,7 @@ class RnCritic(nn.Module):
         obs_objects = [obs[:, self.dim_body + self.dim_object * i: self.dim_body + self.dim_object * (i + 1)]
                        for i in range(self.nb_objects)]
 
-        delta_g = g - ag
+        delta_g = g
 
         inp_mp = torch.stack([torch.cat([obs_body, act, delta_g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
                                          obs_objects[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
@@ -112,7 +112,7 @@ class RnActor(nn.Module):
         obs_objects = [obs[:, self.dim_body + self.dim_object * i: self.dim_body + self.dim_object * (i + 1)]
                        for i in range(self.nb_objects)]
 
-        delta_g = g - ag
+        delta_g = g
 
         inp_mp = torch.stack([torch.cat([obs_body, delta_g[:, self.predicate_ids[i]], obs_objects[self.edges[i][0]],
                                          obs_objects[self.edges[i][1]]], dim=-1) for i in range(self.n_permutations)])
