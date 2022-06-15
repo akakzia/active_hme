@@ -420,7 +420,7 @@ class HMERolloutWorker(RolloutWorker):
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < 0.2:
+        if t > 5 and np.random.uniform() < 0.1:
             # SP intervenes
             generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
@@ -438,7 +438,8 @@ class HMERolloutWorker(RolloutWorker):
                     relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
                     relabeled_episodes[i]['her'] = False
                 
-                all_episodes = updated_episodes + relabeled_episodes
+                # all_episodes = updated_episodes + relabeled_episodes
+                all_episodes = relabeled_episodes
         else:
             # Autotelic phase
             # if t > 10 and len(self.stepping_stones_beyond_pairs_list) > 0:
