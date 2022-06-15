@@ -181,12 +181,12 @@ def launch(args):
                 av_res = np.array(all_results).mean(axis=0)
                 av_rewards = np.array(all_rewards).mean(axis=0)
                 global_sr = np.mean(av_res)
-                if goal_sampler.active_buckets_ids is not None:
-                    logger.record_tabular('_nb_buckets', len(goal_sampler.active_buckets_ids))
-                    for i, b in enumerate(goal_sampler.active_buckets_ids):
-                        logger.record_tabular(f'_size_bucket_{i}', len(goal_sampler.buckets[b]))
-                        logger.record_tabular(f'_lp_{i}', goal_sampler.lp[i])
-                        logger.record_tabular(f'_p_{i}', goal_sampler.p[i])
+                # if goal_sampler.active_buckets_ids is not None:
+                #     logger.record_tabular('_nb_buckets', len(goal_sampler.active_buckets_ids))
+                #     for i, b in enumerate(goal_sampler.active_buckets_ids):
+                #         logger.record_tabular(f'_size_bucket_{i}', len(goal_sampler.buckets[b]))
+                #         logger.record_tabular(f'_lp_{i}', goal_sampler.lp[i])
+                #         logger.record_tabular(f'_p_{i}', goal_sampler.p[i])
                 log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:

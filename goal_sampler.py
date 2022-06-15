@@ -87,37 +87,37 @@ class GoalSampler:
         # Update the goal memory
         self.update_goal_memory(episodes)
 
-        do_curriculum = (self.n_cycles > self.start_curriculum_k)
-        do_bucket_generation = (self.n_cycles % self.bucket_generation_freq == 0)
-        do_bucket_evaluation = (self.n_cycles % self.bucket_evaluation_freq == 0)
-        if do_curriculum:
-            assert len(self.discovered_goals) > 0, 'Attempting to perform curriculum while nothing is discovered yet !'
-            if do_bucket_generation:
-                # First estimate and normalize goal values for all discovered goals
-                norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
-                self.values_goals = [norm_values]
+        # do_curriculum = (self.n_cycles > self.start_curriculum_k)
+        # do_bucket_generation = (self.n_cycles % self.bucket_generation_freq == 0)
+        # do_bucket_evaluation = (self.n_cycles % self.bucket_evaluation_freq == 0)
+        # if do_curriculum:
+        #     assert len(self.discovered_goals) > 0, 'Attempting to perform curriculum while nothing is discovered yet !'
+        #     if do_bucket_generation:
+        #         # First estimate and normalize goal values for all discovered goals
+        #         norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
+        #         self.values_goals = [norm_values]
 
-                # Then, generate buckets based on the normalized goal values
-                self.buckets = self.generate_buckets(normalized_goal_values=norm_values, granularity=self.granularity, equal_goal_repartition=False)
+        #         # Then, generate buckets based on the normalized goal values
+        #         self.buckets = self.generate_buckets(normalized_goal_values=norm_values, granularity=self.granularity, equal_goal_repartition=False)
 
-                # Compute values per bucket
-                self.values_buckets = [self.evaluate_buckets()]
+        #         # Compute values per bucket
+        #         self.values_buckets = [self.evaluate_buckets()]
 
-                # Compute LP
-                self.update_lp()
+        #         # Compute LP
+        #         self.update_lp()
 
-            elif do_bucket_evaluation and self.goal_buckets is not None:
-                n_goals_in_buckets = len(self.goal_buckets)
-                value_estimations = self.goal_evaluator.estimate_goal_value(goals = np.array(self.discovered_goals[:n_goals_in_buckets])) 
-                self.values_goals.append(value_estimations)
+        #     elif do_bucket_evaluation and self.goal_buckets is not None:
+        #         n_goals_in_buckets = len(self.goal_buckets)
+        #         value_estimations = self.goal_evaluator.estimate_goal_value(goals = np.array(self.discovered_goals[:n_goals_in_buckets])) 
+        #         self.values_goals.append(value_estimations)
                 
-                # Computes values per bucket
-                self.values_buckets.append(self.evaluate_buckets())
+        #         # Computes values per bucket
+        #         self.values_buckets.append(self.evaluate_buckets())
 
-                # Compute LP
-                self.update_lp()
+        #         # Compute LP
+        #         self.update_lp()
             
-            self.sync_curriculum()
+        #     self.sync_curriculum()
 
         self.n_cycles += 1
 
