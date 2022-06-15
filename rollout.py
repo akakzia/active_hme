@@ -441,32 +441,32 @@ class HMERolloutWorker(RolloutWorker):
                 all_episodes = updated_episodes + relabeled_episodes
         else:
             # Autotelic phase
-            if t > 10 and len(self.stepping_stones_beyond_pairs_list) > 0:
-                # internalize SP intervention
-                generated_episodes = self.perform_social_episodes(agent_network, time_dict)
+            # if t > 10 and len(self.stepping_stones_beyond_pairs_list) > 0:
+            #     # internalize SP intervention
+            #     generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
-                # Concatenate mini-episodes and perform data augmentation
-                updated_episodes = []
-                for episode in generated_episodes:
-                    merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
-                    updated_episodes.append(merged_mini_episodes)
+            #     # Concatenate mini-episodes and perform data augmentation
+            #     updated_episodes = []
+            #     for episode in generated_episodes:
+            #         merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
+            #         updated_episodes.append(merged_mini_episodes)
                 
-                all_episodes = updated_episodes
-                # Augment episodes by relabeling using the last goal
-                if self.args.data_augmentation:
-                    relabeled_episodes = updated_episodes.copy()
-                    for i in range(len(relabeled_episodes)):
-                        relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
-                        relabeled_episodes[i]['her'] = False
+            #     all_episodes = updated_episodes
+            #     # Augment episodes by relabeling using the last goal
+            #     if self.args.data_augmentation:
+            #         relabeled_episodes = updated_episodes.copy()
+            #         for i in range(len(relabeled_episodes)):
+            #             relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
+            #             relabeled_episodes[i]['her'] = False
                     
-                    all_episodes = updated_episodes + relabeled_episodes
-            else:
-                t_i = time.time()
-                goals = self.goal_sampler.sample_goal(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-                time_dict['goal_sampler'] += time.time() - t_i
-                all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
-                                                     true_eval=False,  # these are not offline evaluation episodes
-                                                    )
+            #         all_episodes = updated_episodes + relabeled_episodes
+            # else:
+            t_i = time.time()
+            goals = self.goal_sampler.sample_goal(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            time_dict['goal_sampler'] += time.time() - t_i
+            all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                                    true_eval=False,  # these are not offline evaluation episodes
+                                                )
         self.sync()
         return all_episodes
 
