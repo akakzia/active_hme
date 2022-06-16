@@ -174,7 +174,7 @@ class RnGoalValue(nn.Module):
 
         self.nb_objects = nb_objects
 
-        dim_mp_input = 2 * (self.nb_objects + 2) # 2 * (object dim (one hot) + nb_predicates per pair)
+        dim_mp_input = 2 * (self.nb_objects + 4) # 2 * (object dim (one hot) + nb_predicates per pair)
         dim_mp_output = 3 * dim_mp_input
 
         dim_rho_value_input = dim_mp_output
@@ -249,10 +249,10 @@ class RnSemantic:
         # Process indexes for graph construction
         self.edges, self.incoming_edges, self.predicate_ids = get_graph_structure(self.nb_objects)
 
-        dim_mp_actor_input = 2 * (self.dim_object + 2) + self.dim_body # 2 * dim node + dim partial goal + dim global
+        dim_mp_actor_input = 2 * (self.dim_object + 4) + self.dim_body # 2 * dim node + dim partial goal + dim global
         dim_mp_actor_output = 3 * dim_mp_actor_input
 
-        dim_mp_critic_input = 2 * (self.dim_object + 2) + (self.dim_body + self.dim_act) # 2 * dim node + dim partial goal + dim global
+        dim_mp_critic_input = 2 * (self.dim_object + 4) + (self.dim_body + self.dim_act) # 2 * dim node + dim partial goal + dim global
         dim_mp_critic_output = 3 * dim_mp_actor_input
 
         # dim_phi_actor_input = self.dim_body + self.dim_object + dim_mp_actor_output

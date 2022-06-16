@@ -176,7 +176,7 @@ class GoalSampler:
                     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
 
                     # Check to which stack class corresponds the discovered goal
-                    above_predicates = last_ag[10:]
+                    above_predicates = last_ag[10:30]
                     try:
                         c = self.stacks_to_class[str(above_predicates)]
                         self.discovered_goals_per_stacks[c] += 1
@@ -230,7 +230,7 @@ class GoalSampler:
     def init_stats(self):
         self.stats = dict()
         # Number of classes of eval
-        if self.goal_dim == 30:
+        if self.goal_dim == 35:
             n = 11
         else:
             n = 6

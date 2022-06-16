@@ -97,6 +97,6 @@ def reset_mocap2body_xpos(sim):
 
 def get_idxs_per_object(n):
     """ For each objects, outputs the predicates indexes that include the corresponding object"""
-    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2))
+    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2)) + [(i, i) for i in range(n)]
     obj_ids = np.arange(n)
     return np.array([np.array([i for i in range(len(map_list)) if obj_id in map_list[i]]) for obj_id in obj_ids])

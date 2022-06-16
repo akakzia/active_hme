@@ -64,7 +64,7 @@ class FetchManipulateEnv(robot_env.RobotEnv):
         self.num_predicates = len(self.predicates)
         self.reward_type = reward_type
 
-        self.goal_size = num_blocks * (num_blocks - 1) * 3 // 2
+        self.goal_size = num_blocks * (num_blocks - 1) * 3 // 2 + num_blocks
 
         self.object_names = ['object{}'.format(i) for i in range(self.num_blocks)]
 
@@ -167,19 +167,19 @@ class FetchManipulateEnv(robot_env.RobotEnv):
         This functions takes as input the positions of the objects in the scene and outputs the corresponding semantic configuration
         based on the environment predicates
         """
-        close_config = np.array([])
-        above_config = np.array([])
-        if "close" in self.predicates:
-            object_combinations = itertools.combinations(positions, 2)
-            object_rel_distances = np.array([objects_distance(obj[0], obj[1]) for obj in object_combinations])
+        # Compute close predicates
+        object_combinations = itertools.combinations(positions, 2)
+        object_rel_distances = np.array([objects_distance(obj[0], obj[1]) for obj in object_combinations])
+        close_config = np.array([self._is_close(distance) for distance in object_rel_distances])
 
-            close_config = np.array([self._is_close(distance) for distance in object_rel_distances])
-        if "above" in self.predicates:
-            object_permutations = itertools.permutations(positions, 2)
+        # Compute above predicates
+        object_permutations = itertools.permutations(positions, 2)
+        above_config = np.array([is_above(obj[0], obj[1]) for obj in object_permutations])
 
-            above_config = np.array([is_above(obj[0], obj[1]) for obj in object_permutations])
+        # Compute on_table predicates
+        on_table_config = np.array([1. if (position[2] <= 0.426) else -1. for position in positions])
         
-        res = np.concatenate([close_config, above_config])
+        res = np.concatenate([close_config, above_config, on_table_config])
         return res
 
     def _get_obs(self):

@@ -170,7 +170,7 @@ def get_graph_structure(n):
     edges: in the form [to, from]
     incoming_edges: for each node, the indexes of the incoming edges
     predicate_ids: the ids of the predicates takes for each edge """
-    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2))
+    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2)) + [(i, i) for i in range(n)]
     edges = list(permutations(np.arange(n), 2))
     obj_ids = np.arange(n)
     n_comb = n * (n-1) // 2
@@ -187,7 +187,8 @@ def get_graph_structure(n):
     for pair in permutations(np.arange(n), 2):
         ids_g = [i for i in range(len(map_list))
                  if (set(map_list[i]) == set(pair) and i < n_comb)
-                 or (map_list[i] == pair and i >= n_comb)]
+                 or (map_list[i] == pair and 30 > i >= n_comb) or (map_list[i] == (pair[0], pair[0]))
+                 or (map_list[i] == (pair[1], pair[1]))]
         predicate_ids.append(ids_g)
 
     return edges, incoming_edges, predicate_ids
@@ -202,7 +203,7 @@ def get_idxs_per_relation(n):
 
 def get_idxs_per_object(n):
     """ For each objects, outputs the predicates indexes that include the corresponding object"""
-    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2))
+    map_list = list(combinations(np.arange(n), 2)) + list(permutations(np.arange(n), 2)) + [(i, i) for i in range(n)]
     obj_ids = np.arange(n)
     return np.array([np.array([i for i in range(len(map_list)) if obj_id in map_list[i]]) for obj_id in obj_ids])
 
@@ -213,7 +214,7 @@ def get_eval_goals(instruction, n, nb_goals=1):
     n_blocks = n
     n_comb = n_blocks * (n_blocks - 1) // 2
     n_perm = n_blocks * (n_blocks - 1)
-    goal_dim = n_comb + n_perm
+    goal_dim = n_comb + n_perm + n_blocks
     try:
         predicate, pairs = instruction.split('_')
     except ValueError:
@@ -226,6 +227,14 @@ def get_eval_goals(instruction, n, nb_goals=1):
             objects = np.random.choice(np.arange(n_blocks), size=n_blocks, replace=False)
             tower_objects = objects[:2]
             pyramid_objects = objects[2:]
+            # Create on_table predicates
+
+            on_table_config = -np.ones(n_blocks)
+            # The base of the tower
+            on_table_config[tower_objects[-1]] = 1.
+            # The base of the pyramid
+            on_table_config[pyramid_objects[0]] = 1.
+            on_table_config[pyramid_objects[1]] = 1.
             for j in range(1):
                 obj_ids = (tower_objects[j], tower_objects[j+1])
                 for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
@@ -253,51 +262,10 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for id in ids:
             g = -np.ones(goal_dim)
             g[id] = 1.
+            g[-n_blocks:] = on_table_config
             res.append(g)
         return np.array(res)
 
-    # trapeze
-    if predicate == 'trapeze':
-        ids = []
-        for _ in range(nb_goals):
-            id = []
-            objects = np.random.choice(np.arange(n_blocks), size=n_blocks, replace=False)
-            base_objects = objects[:3]
-            top_objects = objects[3:]
-            for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
-                if set((base_objects[0], base_objects[1])) == set(c):
-                    id.append(k)
-                if set((base_objects[1], base_objects[2])) == set(c):
-                    id.append(k)
-                if set((top_objects[0], top_objects[1])) == set(c):
-                    id.append(k)
-                if set((top_objects[0], base_objects[0])) == set(c):
-                    id.append(k)
-                if set((top_objects[0], base_objects[1])) == set(c):
-                    id.append(k)
-                if set((top_objects[0], base_objects[2])) == set(c):
-                    id.append(k)
-                if set((top_objects[1], base_objects[0])) == set(c):
-                    id.append(k)
-                if set((top_objects[1], base_objects[1])) == set(c):
-                    id.append(k)
-                if set((top_objects[1], base_objects[2])) == set(c):
-                    id.append(k)
-            for k, c in enumerate(permutations(np.arange(n_blocks), 2)):
-                if (top_objects[0], base_objects[0]) == c:
-                    id.append(k + n_comb)
-                if (top_objects[0], base_objects[1]) == c:
-                    id.append(k + n_comb)
-                if (top_objects[1], base_objects[1]) == c:
-                    id.append(k + n_comb)
-                if (top_objects[1], base_objects[2]) == c:
-                    id.append(k + n_comb)
-            ids.append(np.array(id))
-        for id in ids:
-            g = -np.ones(goal_dim)
-            g[id] = 1.
-            res.append(g)
-        return np.array(res)
     # two towers
     if predicate == '2stacks':
         stack_size_1 = int(pairs_1)
@@ -307,7 +275,10 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for _ in range(nb_goals):
             id = []
             objects = np.random.choice(np.arange(n_blocks), size=stack_size_1 + stack_size_2, replace=False)
+            # on_table config creation
+            on_table_config = np.ones(n_blocks)
             for j in range(stack_size_1 - 1):
+                on_table_config[objects[j]] = -1.
                 obj_ids = (objects[j], objects[j + 1])
                 for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
                     if set(obj_ids) == set(c):
@@ -316,6 +287,7 @@ def get_eval_goals(instruction, n, nb_goals=1):
                     if obj_ids == c:
                         id.append(k + n_comb)
             for j in range(stack_size_1, stack_size_1+stack_size_2-1):
+                on_table_config[objects[j]] = -1.
                 obj_ids = (objects[j], objects[j + 1])
                 for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
                     if set(obj_ids) == set(c):
@@ -327,6 +299,7 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for id in ids:
             g = -np.ones(goal_dim)
             g[id] = 1.
+            g[-n_blocks:] = on_table_config
             res.append(g)
         return np.array(res)
 
@@ -337,6 +310,9 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for _ in range(nb_goals):
             id = []
             objects = np.random.choice(np.arange(n_blocks), size=n_base+1, replace=False)
+            # Create on_table_predicates
+            on_table_config = np.ones(n_blocks)
+            on_table_config[objects[-1]] = -1.
             for j in range(n_base-1):
                 obj_ids = (objects[j], objects[j + 1])
                 for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
@@ -355,6 +331,7 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for id in ids:
             g = -np.ones(goal_dim)
             g[id] = 1.
+            g[-n_blocks:] = on_table_config
             res.append(g)
         return np.array(res)
 
@@ -373,6 +350,8 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for id in ids:
             g = -np.ones(goal_dim)
             g[id] = 1.
+            # all on table
+            g[-n_blocks:] = np.ones(n_blocks)
             res.append(g)
         return np.array(res)
     # one tower
@@ -381,8 +360,11 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for _ in range(nb_goals):
             id = []
             objects = np.random.choice(np.arange(n_blocks), size=stack_size, replace=False)
+            # Create on_table predicates
+            on_table_config = np.ones(n_blocks)
             for j in range(stack_size-1):
                 obj_ids = (objects[j], objects[j+1])
+                on_table_config[objects[j]] = -1.
                 for k, c in enumerate(combinations(np.arange(n_blocks), 2)):
                     if set(obj_ids) == set(c):
                         id.append(k)
@@ -393,6 +375,7 @@ def get_eval_goals(instruction, n, nb_goals=1):
         for id in ids:
             g = -np.ones(goal_dim)
             g[id] = 1.
+            g[-n_blocks:] = on_table_config
             res.append(g)
         return np.array(res)
 
@@ -410,9 +393,9 @@ def generate_stacks_dict(list_classes, n_blocks=5, n_trials=100):
         eval_goals = np.array(eval_goals)
 
         unique_goals = np.unique(eval_goals, axis=0)
-        class_id_to_goals[i] = [str(e[n_combinations:]) for e in unique_goals]
+        class_id_to_goals[i] = [str(e[n_combinations:30]) for e in unique_goals]
         for g in unique_goals:
-            stacks_to_class_id[str(g[n_combinations:])] = list_classes[i]
+            stacks_to_class_id[str(g[n_combinations:30])] = list_classes[i]
 
     return stacks_to_class_id
 
