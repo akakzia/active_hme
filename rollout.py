@@ -2,6 +2,7 @@ import random
 import numpy as np
 from mpi4py import MPI
 from graph.agent_graph import AgentGraph
+from utils import apply_on_table_config
 import time
 
 def is_success(ag, g):
@@ -323,6 +324,7 @@ class HMERolloutWorker(RolloutWorker):
                         t_i = time.time()
                         frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
                         self.long_term_goal = random.choices(frontier_ag)[0]
+                        self.long_term_goal = apply_on_table_config(self.long_term_goal)
                         # self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config, 1)), None)  # first element or None
                         if time_dict:
                             time_dict['goal_sampler'] += time.time() - t_i
@@ -353,11 +355,12 @@ class HMERolloutWorker(RolloutWorker):
                         if last_ag is None:
                             last_ag = tuple(self.last_obs['achieved_goal'])
                     else:
-                        last_ag = tuple(self.last_obs['achieved_goal'])
+                        last_ag = tuple(self.last_obs['achieved_goal'][:30])
                     explore_goal = next(iter(agent_network.sample_from_frontier(last_ag, 1)), None)  # first element or None
                     if time_dict is not None:
                         time_dict['goal_sampler'] += time.time() - t_i
                     if explore_goal:
+                        explore_goal = apply_on_table_config(explore_goal)
                         episode = self.generate_one_rollout(explore_goal, False, self.episode_duration)
                         current_episodes.append(episode)
                         success = episode['success'][-1]
@@ -420,7 +423,7 @@ class HMERolloutWorker(RolloutWorker):
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < 0.1:
+        if t > 5 and np.random.uniform() < 0.8:
             # SP intervenes
             generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 

@@ -29,9 +29,9 @@ class AgentGraph():
                 condition = (str(e['ag'][-i]) == str(e['ag'][-i-1]))
                 i -= 1
             if condition:
-                start_config = tuple(e['ag'][0])
-                achieved_goal = tuple(e['ag'][-1])
-                goal = tuple(e['g'][-1])
+                start_config = tuple(e['ag'][0][:30])
+                achieved_goal = tuple(e['ag'][-1][:30])
+                goal = tuple(e['g'][-1][:30])
                 success = e['success'][-1]
 
                 # update agent count stats

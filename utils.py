@@ -408,3 +408,16 @@ def generate_stacks_to_class():
         stacks_to_class = generate_stacks_dict(list_classes=stacks_classes, n_blocks=5, n_trials=2000)
 
         return stacks_to_class
+
+def apply_on_table_config(g):
+    """ Appends the goal with unary on_table predicates """
+    g = np.array(g)
+    map_list = list(permutations(np.arange(5), 2)) 
+    on_table_config = np.ones(5)
+    for i in range(10, 30):
+        if g[i] == 1.:
+            on_table_config[map_list[i-10][0]] = -1.
+    
+    res = np.concatenate([g, on_table_config])
+    return tuple(res)
+
