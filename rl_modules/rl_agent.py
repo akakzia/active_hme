@@ -71,7 +71,6 @@ class RLAgent:
         
         # create the normalizer
         self.o_norm = normalizer(size=self.env_params['obs'], default_clip_range=self.args.clip_range)
-        self.g_norm = normalizer(size=self.env_params['goal'], default_clip_range=self.args.clip_range)
 
         # Target Entropy
         if self.args.automatic_entropy_tuning:
@@ -93,15 +92,15 @@ class RLAgent:
         with torch.no_grad():
             # normalize policy inputs
             obs_norm = self.o_norm.normalize(obs)
-            ag_norm = torch.tensor(self.g_norm.normalize(ag), dtype=torch.float32).unsqueeze(0)
-            g_norm = torch.tensor(self.g_norm.normalize(g), dtype=torch.float32).unsqueeze(0)
+            ag_tensor = torch.tensor(ag, dtype=torch.float32).unsqueeze(0)
+            g_tensor = torch.tensor(g, dtype=torch.float32).unsqueeze(0)
 
             obs_tensor = torch.tensor(obs_norm, dtype=torch.float32).unsqueeze(0)
             if self.args.cuda:
                 obs_tensor = obs_tensor.cuda()
-                g_norm = g_norm.cuda()
-                ag_norm = ag_norm.cuda()
-            self.model.policy_forward_pass(obs_tensor, ag_norm, g_norm, no_noise=no_noise)
+                g_tensor = g_tensor.cuda()
+                ag_tensor = ag_tensor.cuda()
+            self.model.policy_forward_pass(obs_tensor, ag_tensor, g_tensor, no_noise=no_noise)
             if self.args.cuda:
                 action = self.model.pi_tensor.cpu().numpy()[0]
             else:
@@ -168,10 +167,6 @@ class RLAgent:
         # recompute the stats
         self.o_norm.recompute_stats()
 
-        if self.args.normalize_goal:
-            self.g_norm.update(transitions['g'])
-            self.g_norm.recompute_stats()
-
     def _preproc_og(self, o, g):
         o = np.clip(o, -self.args.clip_obs, self.args.clip_obs)
         g = np.clip(g, -self.args.clip_obs, self.args.clip_obs)
@@ -202,25 +197,24 @@ class RLAgent:
 
         # apply normalization
         obs_norm = self.o_norm.normalize(transitions['obs'])
-        g_norm = self.g_norm.normalize(transitions['g'])
-        ag_norm = self.g_norm.normalize(transitions['ag'])
+        g_norm = transitions['g']
+        ag_norm = transitions['ag']
         obs_next_norm = self.o_norm.normalize(transitions['obs_next'])
-        ag_next_norm = self.g_norm.normalize(transitions['ag_next'])
+        ag_next_norm = transitions['ag_next']
 
-        anchor_g_norm = self.g_norm.normalize(transitions['anchor_g'])
+        anchor_g_norm = transitions['anchor_g']
 
         update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
                     self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
                     self.args)
 
     def get_goal_values(self, goals):
-        g_norm = self.g_norm.normalize(goals)
-        g_norm_tensor = torch.tensor(g_norm, dtype=torch.float32)
+        g_tensor = torch.tensor(goals, dtype=torch.float32)
         if self.args.cuda:
-            g_norm_tensor = g_norm_tensor.cuda()
+            g_tensor = g_tensor.cuda()
         
         with torch.no_grad():
-            self.model.value_forward_pass(g_norm_tensor)
+            self.model.value_forward_pass(g_tensor)
         if self.args.cuda:
             values = self.model.value.cpu().numpy()
         else:
@@ -229,18 +223,16 @@ class RLAgent:
         return values.squeeze()
 
     def save(self, model_path, epoch):
-        torch.save([self.o_norm.mean, self.o_norm.std, self.g_norm.mean, self.g_norm.std,
+        torch.save([self.o_norm.mean, self.o_norm.std,
                     self.model.actor.state_dict(), self.model.critic.state_dict(), self.model.value_network.state_dict()],
                     model_path + '/model_{}.pt'.format(epoch))
 
     def load(self, model_path, args):
 
-        o_mean, o_std, g_mean, g_std, actor, critic, value_network = torch.load(model_path, map_location=lambda storage, loc: storage)
+        o_mean, o_std, actor, critic, value_network = torch.load(model_path, map_location=lambda storage, loc: storage)
         self.model.actor.load_state_dict(actor)
         self.model.critic.load_state_dict(critic)
         self.model.value_network.load_state_dict(value_network)
         self.model.actor.eval()
         self.o_norm.mean = o_mean
         self.o_norm.std = o_std
-        self.g_norm.mean = g_mean
-        self.g_norm.std = g_std
