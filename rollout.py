@@ -423,7 +423,7 @@ class HMERolloutWorker(RolloutWorker):
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < 0.8:
+        if t > 5 and np.random.uniform() < 0.2:
             # SP intervenes
             generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
