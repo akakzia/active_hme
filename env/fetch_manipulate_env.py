@@ -19,7 +19,7 @@ def is_above(x, y):
     A function that returns whether the object x is above y
     """
     assert x.shape == y.shape
-    if np.linalg.norm(x[:2] - y[:2]) < 0.01 and 0.06 > x[2] - y[2] > 0.03:
+    if np.linalg.norm(x[:2] - y[:2]) < 0.06 and 0.06 > x[2] - y[2] > 0.03:
         return 1.
     else:
         return -1.
