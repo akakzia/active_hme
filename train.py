@@ -16,7 +16,6 @@ import networkit as nk
 from graph.semantic_graph import SemanticGraph
 from graph.agent_graph import AgentGraph
 import time
-import pickle as pkl
 from mpi_utils import logger
 
 def launch(args):
@@ -26,9 +25,6 @@ def launch(args):
     rank = MPI.COMM_WORLD.Get_rank()
 
     t_total_init = time.time()
-
-    # Algo verification
-    assert args.algo == 'semantic', 'Only semantic algorithm is implemented'
 
     # Make the environment
     args.env_name = 'FetchManipulate{}Objects-v0'.format(args.n_blocks)
@@ -54,38 +50,18 @@ def launch(args):
     goal_sampler = GoalSampler(args)
 
     # Initialize RL Agent
-    if args.agent == "SAC":
-        policy = RLAgent(args, env.compute_reward, goal_sampler)
-        # policy.load('/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/value_network/agent_0/1/models/model_210.pt', args)
-    else:
-        raise NotImplementedError
+    policy = RLAgent(args, env.compute_reward, goal_sampler)
 
     # Initialize Rollout Worker
     rollout_worker = HMERolloutWorker(env, policy, goal_sampler, args)
 
     # Sets the goal_evaluator estimator inside the goal sampler
-    if args.goal_evaluator_method == 1:
-        goal_sampler.setup_policy(policy)
-    else:
-        raise NotImplementedError('Only method 1 is implemented, please make sure you want to run method 2')
+    goal_sampler.setup_policy(policy)
 
     # Load oracle graph
     nk_graph = nk.Graph(0,weighted=True, directed=True)
     semantic_graph = SemanticGraph(bidict(),nk_graph,args.n_blocks,True,args=args)
     agent_network = AgentGraph(semantic_graph,logdir,args)
-    
-    # # Temporary load discovered goals 
-    # with open('/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/value_network/agent_0/1' + f'/buckets/discovered_g_ep_210.pkl', 'rb') as f:
-    #         data_discovered = pkl.load(file=f)
-    
-    # # Add them to graph
-    # for g in data_discovered:
-    #     agent_network.semantic_graph.create_node(tuple(g))
-    # agent_network.teacher.compute_frontier(agent_network.semantic_graph)
-    # print(f'Frontier {len(agent_network.teacher.agent_frontier)}')
-    # print(f'SS {len(agent_network.teacher.agent_stepping_stones)}')
-    # frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
-    # explore_goal = next(iter(agent_network.sample_from_frontier(frontier_ag[-1], 1)), None) 
 
     # Main interaction loop
     episode_count = 0
@@ -100,17 +76,8 @@ def launch(args):
 
         # Cycles loop
         for _ in range(args.n_cycles):
-
-            # Sample goals
-            # t_i = time.time()
-            # goals = goal_sampler.sample_goal(n_goals=args.num_rollouts_per_mpi, evaluation=False)
-            # time_dict['goal_sampler'] += time.time() - t_i
-
             # Environment interactions
             t_i = time.time()
-            # episodes = rollout_worker.generate_rollout(goals=goals,  # list of goal configurations
-            #                                            true_eval=False,  # these are not offline evaluation episodes
-            #                                           )
             episodes = rollout_worker.train_rollout(agent_network= agent_network,
                                                     t=epoch,
                                                     time_dict=time_dict)
@@ -118,8 +85,7 @@ def launch(args):
 
             # Goal Sampler updates
             t_i = time.time()
-            if args.algo == 'semantic':
-                episodes = goal_sampler.update(episodes, episode_count)
+            episodes = goal_sampler.update(episodes)
             time_dict['gs_update'] += time.time() - t_i
 
             # Storing episodes
@@ -152,18 +118,7 @@ def launch(args):
             if rank==0: logger.info('\tRunning eval ..')
             # Performing evaluations
             t_i = time.time()
-            eval_goals = []
-            if args.n_blocks == 3:
-                instructions = ['close_1', 'close_2', 'close_3', 'stack_2', 'pyramid_3', 'stack_3']
-            elif args.n_blocks == 5:
-                instructions = ['close_1', 'close_2', 'close_3', 'stack_2', 'stack_3', '2stacks_2_2', '2stacks_2_3', 'pyramid_3',
-                                'mixed_2_3', 'stack_4', 'stack_5']
-            else:
-                raise NotImplementedError
-            for instruction in instructions:
-                eval_goal = get_eval_goals(instruction, n=args.n_blocks)
-                eval_goals.append(eval_goal.squeeze(0))
-            eval_goals = np.array(eval_goals)
+            eval_goals = goal_sampler.sample_goals(evaluation=True)
             episodes = rollout_worker.generate_rollout(goals=eval_goals,
                                                        true_eval=True,  # this is offline evaluations
                                                        )
@@ -181,17 +136,11 @@ def launch(args):
                 av_res = np.array(all_results).mean(axis=0)
                 av_rewards = np.array(all_rewards).mean(axis=0)
                 global_sr = np.mean(av_res)
-                # if goal_sampler.active_buckets_ids is not None:
-                #     logger.record_tabular('_nb_buckets', len(goal_sampler.active_buckets_ids))
-                #     for i, b in enumerate(goal_sampler.active_buckets_ids):
-                #         logger.record_tabular(f'_size_bucket_{i}', len(goal_sampler.buckets[b]))
-                #         logger.record_tabular(f'_lp_{i}', goal_sampler.lp[i])
-                #         logger.record_tabular(f'_p_{i}', goal_sampler.p[i])
                 log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:
                     policy.save(model_path, epoch)
-                    goal_sampler.save_bucket_contents(bucket_path, epoch)
+                    goal_sampler.save_discovered_goals(bucket_path, epoch)
                 if rank==0: logger.info('\tEpoch #{}: SR: {}'.format(epoch, global_sr))
 
 

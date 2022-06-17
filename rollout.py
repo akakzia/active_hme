@@ -466,7 +466,7 @@ class HMERolloutWorker(RolloutWorker):
             #         all_episodes = updated_episodes + relabeled_episodes
             # else:
             t_i = time.time()
-            goals = self.goal_sampler.sample_goal(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
             time_dict['goal_sampler'] += time.time() - t_i
             all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                                     true_eval=False,  # these are not offline evaluation episodes

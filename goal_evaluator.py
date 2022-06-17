@@ -5,41 +5,24 @@ import numpy as np
 
 class GoalEvaluator():
     def __init__(self, args, policy=None, rollout_worker=None):
-        assert args.goal_evaluator_method in [1, 2], 'Please select a valid evaluation method, only 1 and 2 are implemented !'
         assert args.normalization_technique in ['linear_fixed', 'linear_moving', 'mixed'], \
         'Please select a valid normalization technique from [linear_fixed, linear_moving, mixed]'
 
-        self.method = args.goal_evaluator_method
         self.cuda = args.cuda
         self.normalization_technique = args.normalization_technique
 
-        if self.method == 1:
-            # Define the policy to 1) normalize; 2) evaluate goals.
-            self.policy = policy
-
-        elif self.method == 2:
-
-            # add rollout_worker to estimate goal success rate
-            self.rollout_worker = rollout_worker
+        # Define the policy to 1) normalize; 2) evaluate goals.
+        self.policy = policy
 
     def setup_policy(self, policy):
         """ Sets up the policy """
         self.policy = policy
 
     def estimate_goal_value(self, goals, ag=None):
-
-        if self.method == 1:
-            # If no initial goals are given, then estimate value starting from all coplanar
-            ag = - np.ones(goals.shape).astype(np.float) if ag is None else ag
-            # Use value neural estimator to get goal values
-            goal_values = self.forward_goal_values(ag, goals)
-
-        if self.method == 2:
-
-            # add rollout on goals to estimate success rate
-
-            # temporary
-            goal_values = np.random.rand(len(goals))
+        # If no initial goals are given, then estimate value starting from all coplanar
+        ag = - np.ones(goals.shape).astype(np.float) if ag is None else ag
+        # Use value neural estimator to get goal values
+        goal_values = self.forward_goal_values(ag, goals)
 
         # normalize goal values
         # normalized_goal_values = goal_values/np.max(goal_values)
@@ -49,8 +32,6 @@ class GoalEvaluator():
     
     def forward_goal_values(self, ag, goals):
         """ Normalize, tensorize and forward goals through the goal value estimator """
-        n_goals = goals.shape[0]
-
         ag_tensor = torch.tensor(ag, dtype=torch.float32)
         g_tensor = torch.tensor(goals, dtype=torch.float32)
         if self.cuda:

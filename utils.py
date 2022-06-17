@@ -421,3 +421,6 @@ def apply_on_table_config(g):
     res = np.concatenate([g, on_table_config])
     return tuple(res)
 
+INSTRUCTIONS = ['close_1', 'close_2', 'close_3', 'stack_2', 'stack_3', '2stacks_2_2', '2stacks_2_3', 'pyramid_3',
+                'mixed_2_3', 'stack_4', 'stack_5']
+
