@@ -333,7 +333,6 @@ class HMERolloutWorker(RolloutWorker):
                 relabeled_episodes = updated_episodes.copy()
                 for i in range(len(relabeled_episodes)):
                     relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
-                    relabeled_episodes[i]['her'] = False
                 
                 all_episodes = relabeled_episodes
         else:
@@ -352,7 +351,6 @@ class HMERolloutWorker(RolloutWorker):
                 relabeled_episodes = updated_episodes.copy()
                 for i in range(len(relabeled_episodes)):
                     relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
-                    relabeled_episodes[i]['her'] = False
                 
                 # all_episodes = updated_episodes + relabeled_episodes
                 all_episodes = relabeled_episodes
@@ -392,9 +390,11 @@ class HMERolloutWorker(RolloutWorker):
     def train_rollout(self, agent_network, t, time_dict=None):
         if t > 5 and np.random.uniform() < 0.2:
             all_episodes = self.launch_social_phase(agent_network, time_dict)
+            episodes_type = 'social'
         else:
             all_episodes = self.launch_autotelic_phase(time_dict)
+            episodes_type = 'individual'
 
         self.sync()
-        return all_episodes
+        return all_episodes, episodes_type
 

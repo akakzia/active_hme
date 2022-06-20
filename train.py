@@ -78,9 +78,9 @@ def launch(args):
         for _ in range(args.n_cycles):
             # Environment interactions
             t_i = time.time()
-            episodes = rollout_worker.train_rollout(agent_network= agent_network,
-                                                    t=epoch,
-                                                    time_dict=time_dict)
+            episodes, episodes_type = rollout_worker.train_rollout(agent_network= agent_network,
+                                                                   t=epoch,
+                                                                   time_dict=time_dict)
             time_dict['rollout'] += time.time() - t_i
 
             # Goal Sampler updates
@@ -90,7 +90,7 @@ def launch(args):
 
             # Storing episodes
             t_i = time.time()
-            policy.store(episodes)
+            policy.store(episodes, episodes_type)
             time_dict['store'] += time.time() - t_i
 
             # Agent Network Update : 

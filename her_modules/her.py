@@ -26,24 +26,14 @@ class her_sampler:
 
         # select which rollouts and which timesteps to be used
         episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)
-
-        # Exclude episode where no relabeling is needed
-        try:
-            no_relabel = np.where(episode_batch['her'] == 0.)[0]
-            if len(no_relabel) > 0:
-                stop = 1
-        except KeyError:
-            no_relabel = np.array([])
-
         t_samples = np.random.randint(T, size=batch_size)
-        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys() if key!='her'}
+        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys()}
 
         transitions['anchor_g'] = transitions['g'].copy()
         # her idx
         if self.multi_criteria_her:
             for sub_goal in self.semantic_ids:
-                her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)[0]
-                her_indexes = np.array([her_indexes[i] for i in range(len(her_indexes)) if episode_idxs[i] not in no_relabel])
+                her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)
 
                 # future goal selection
                 if self.replay_strategy == 'final':
@@ -71,6 +61,29 @@ class her_sampler:
             future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
             transitions['g'][her_indexes] = future_ag
             # to get the params to re-compute reward
+        transitions['r'] = np.expand_dims(np.array([self.compute_reward_masks(ag_next, g) for ag_next, g in zip(transitions['ag_next'],
+                                                    transitions['g'])]), 1)
+        
+        transitions['anchor_r'] = np.expand_dims(np.array([self.compute_reward_masks(ag_next, g) for ag_next, g in zip(transitions['ag_next'],
+                                                    transitions['anchor_g'])]), 1)
+
+        return transitions
+
+
+    def sample_transitions(self, episode_batch, batch_size_in_transitions):
+        """ Sample transitions from batch of episodes WITHOUT applying Hindsight Experience Replay """
+        T = episode_batch['actions'].shape[1]
+        rollout_batch_size = episode_batch['actions'].shape[0]
+        batch_size = batch_size_in_transitions
+
+        # select which rollouts and which timesteps to be used
+        episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)
+
+        t_samples = np.random.randint(T, size=batch_size)
+        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys() if key!='her'}
+
+        transitions['anchor_g'] = transitions['g'].copy()
+    
         transitions['r'] = np.expand_dims(np.array([self.compute_reward_masks(ag_next, g) for ag_next, g in zip(transitions['ag_next'],
                                                     transitions['g'])]), 1)
         

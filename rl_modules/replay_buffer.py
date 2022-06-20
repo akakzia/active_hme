@@ -26,7 +26,6 @@ class ReplayBuffer:
                        'ag': np.empty([self.size, self.T + 1, self.env_params['goal']]),
                        'g': np.empty([self.size, self.T, self.env_params['goal']]),
                        'actions': np.empty([self.size, self.T, self.env_params['action']]),
-                       'her': np.empty([self.size])
                        }
 
         self.goal_ids = np.zeros([self.size])  # contains id of achieved goal (discovery rank)
@@ -47,11 +46,6 @@ class ReplayBuffer:
                 self.buffer['ag'][idxs[i]] = e['ag']
                 self.buffer['g'][idxs[i]] = e['g']
                 self.buffer['actions'][idxs[i]] = e['act']
-                try:
-                    self.buffer['her'][idxs[i]] = e['her']
-                except KeyError:
-                    self.buffer['her'][idxs[i]] = True
-                # self.goal_ids[idxs[i]] = e['last_ag_oracle_id']
 
     # sample the data from the replay buffer
     def sample(self, batch_size):

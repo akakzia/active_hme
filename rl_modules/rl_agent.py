@@ -86,7 +86,15 @@ class RLAgent:
                                   buffer_size=self.args.buffer_size,
                                   sample_func=self.her_module.sample_her_transitions,
                                   goal_sampler=self.goal_sampler
-                                  )
+        )
+
+        # Create social replay buffer for social episodes
+        # create the replay buffer
+        self.social_buffer = ReplayBuffer(env_params=self.env_params,
+                                          buffer_size=self.args.buffer_size,
+                                          sample_func=self.her_module.sample_transitions,
+                                          goal_sampler=self.goal_sampler
+        )
 
     def act(self, obs, ag, g, no_noise):
         with torch.no_grad():
@@ -108,8 +116,12 @@ class RLAgent:
                 
         return action.copy()
     
-    def store(self, episodes):
-        self.buffer.store_episode(episode_batch=episodes)
+    def store(self, episodes, episodes_type):
+        """ Store episodes in the corresponding buffer according to type (either social or individual) """
+        if episodes_type == 'individual':
+            self.buffer.store_episode(episode_batch=episodes)
+        else:
+            self.social_buffer.store_episode(episode_batch=episodes)
 
     # pre_process the inputs
     def _preproc_inputs(self, obs, ag, g):
