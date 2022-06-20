@@ -192,8 +192,8 @@ class RLAgent:
     # update the network
     def _update_network(self):
         # sample from buffer, this is done with LP is multi-head is true
-        if np.random.uniform() < self.goal_sampler.query_proba:
-            transitions = self.social_buffer(self.args.batch_size)
+        if np.random.uniform() < self.goal_sampler.query_proba and self.social_buffer.current_size > 0:
+            transitions = self.social_buffer.sample(self.args.batch_size)
         else:
             transitions = self.buffer.sample(self.args.batch_size)
 
