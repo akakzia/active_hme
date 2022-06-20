@@ -35,8 +35,8 @@ class RolloutWorker:
         if not true_eval:
             observation = self.env.unwrapped.reset_goal(goal=np.array(goals[0]))
         for i in range(goals.shape[0]):
-            if true_eval:
-                observation = self.env.unwrapped.reset_goal(goal=np.array(goals[i]))
+            # if true_eval:
+            observation = self.env.unwrapped.reset_goal(goal=np.array(goals[i]))
             obs = observation['observation']
             ag = observation['achieved_goal']
             ag_bin = observation['achieved_goal_binary']
@@ -385,10 +385,11 @@ class HMERolloutWorker(RolloutWorker):
         if MPI.COMM_WORLD.Get_rank() == 0:
             self.goal_sampler.stats['nb_social_interventions'].append(self.nb_social_interventions)
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
+            self.goal_sampler.stats['query_proba'].append(self.goal_sampler.query_proba)
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < 0.2:
+        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba:
             all_episodes = self.launch_social_phase(agent_network, time_dict)
             episodes_type = 'social'
         else:

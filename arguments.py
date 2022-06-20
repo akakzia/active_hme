@@ -53,13 +53,18 @@ def get_args():
     parser.add_argument('--n-test-rollouts', type=int, default=1, help='the number of tests')
 
     # the goal evaluator arguments
-    parser.add_argument('--normalization-technique', type=str, default='mixed', help='[linear_fixed, linear_moving, mixed]')
+    parser.add_argument('--normalization-technique', type=str, default='linear_fixed', help='[linear_fixed, linear_moving, mixed]')
     parser.add_argument('--use-stability-condition', type=bool, default=False, help='only consider stable goals as discovered')
     
     parser.add_argument('--strategy', type=int, default=2, help='Possible values: 0: Frontier; 1: Frontier and Stop, 2: Frontier and Beyond'
                                                                    '3: Beyond')
     
     parser.add_argument('--data-augmentation', type=bool, default=True, help='Augment guided episodes by relabeling')
+
+    parser.add_argument('--min-queue-length', type=int, default=50, help='test')
+    parser.add_argument('--max-queue-length', type=int, default=100, help='test')
+    parser.add_argument('--beta', type=int, default=50, help='test')
+    parser.add_argument('--progress-function', type=str, default='mean', help='test')
 
     args = parser.parse_args()
 

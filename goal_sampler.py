@@ -26,6 +26,13 @@ class GoalSampler:
         # Initialize value estimations list
         self.values_goals = []
 
+        # Query arguments
+        self.query_proba = 0.
+        self.min_queue_length = args.min_queue_length * MPI.COMM_WORLD.Get_size()
+        self.max_queue_length = args.max_queue_length * MPI.COMM_WORLD.Get_size()
+        self.beta = args.beta
+        self.progress_function = args.progress_function
+
         # Initialize goal_evaluator
         self.goal_evaluator = GoalEvaluator(args)
 
@@ -73,8 +80,22 @@ class GoalSampler:
         # Update the goal memory
         self.update_goal_memory(episodes)
 
-        # norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
-        # self.values_goals = [norm_values]
+        if self.rank == 0.:
+            # Compute goal values
+            norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
+            self.values_goals.append(norm_values)
+
+            # Compute Query Probabilities
+            if len(self.values_goals) > self.min_queue_length:
+                delta_value_goals = abs(self.values_goals[0] - self.values_goals[-1][:len(self.values_goals[0])])
+                if self.progress_function == 'mean':
+                    progress = np.mean(delta_value_goals) 
+                elif self.progress_function == 'max':
+                    progress = np.max(delta_value_goals)
+                
+                self.query_proba = np.exp(- self.beta * progress)
+            
+        self.sync_queries()
 
         return episodes
 
@@ -130,6 +151,12 @@ class GoalSampler:
         self.discovered_goals_str = MPI.COMM_WORLD.bcast(self.discovered_goals_str, root=0)
         self.discovered_goals_oracle_ids = MPI.COMM_WORLD.bcast(self.discovered_goals_oracle_ids, root=0)
         self.nb_discovered_goals = MPI.COMM_WORLD.bcast(self.nb_discovered_goals, root=0)
+    
+    def sync_queries(self):
+        """ Synchronize the query's attributes between all workers """
+        self.values_goals = MPI.COMM_WORLD.bcast(self.values_goals, root=0)
+        self.values_goals = self.values_goals[-self.max_queue_length:]
+        self.query_proba = MPI.COMM_WORLD.bcast(self.query_proba, root=0)
 
     def init_stats(self):
         self.stats = dict()
@@ -152,6 +179,7 @@ class GoalSampler:
         self.stats['nb_discovered'] = []
         self.stats['nb_social_interventions'] = []
         self.stats['nb_internalized_pairs'] = []
+        self.stats['query_proba'] = []
         keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:

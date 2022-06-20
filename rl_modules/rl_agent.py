@@ -192,7 +192,10 @@ class RLAgent:
     # update the network
     def _update_network(self):
         # sample from buffer, this is done with LP is multi-head is true
-        transitions = self.buffer.sample(self.args.batch_size)
+        if np.random.uniform() < self.goal_sampler.query_proba:
+            transitions = self.social_buffer(self.args.batch_size)
+        else:
+            transitions = self.buffer.sample(self.args.batch_size)
 
         # pre-process the observation and goal
         o, o_next, g, ag, ag_next, actions, rewards = transitions['obs'], transitions['obs_next'], transitions['g'], transitions['ag'], \
