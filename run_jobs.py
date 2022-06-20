@@ -16,15 +16,15 @@ mkdir_p(job_directory)
 nb_seeds = 1
 
 for s in range(nb_seeds):
-    job_file = os.path.join(job_directory, f"test_fixed_queries_%.slurm")
+    job_file = os.path.join(job_directory, f"test_queries_%.slurm")
 
     with open(job_file, 'w') as fh:
         fh.writelines("#!/bin/bash\n")
         fh.writelines("#SBATCH --account=kcr@v100\n")
-        fh.writelines(f"#SBATCH --job-name=test_fixed_queries\n")
+        fh.writelines(f"#SBATCH --job-name=test_queries\n")
         fh.writelines("#SBATCH --qos=qos_gpu-t3\n")
-        fh.writelines(f"#SBATCH --output=test_fixed_queries_%_%j.out\n")
-        fh.writelines(f"#SBATCH --error=test_fixed_queries_%_%j.out\n")
+        fh.writelines(f"#SBATCH --output=test_queries_%_%j.out\n")
+        fh.writelines(f"#SBATCH --error=test_queries_%_%j.out\n")
         fh.writelines("#SBATCH --time=19:59:59\n")
         fh.writelines("#SBATCH --ntasks=24\n")
         fh.writelines("#SBATCH --ntasks-per-node=1\n")
@@ -43,7 +43,7 @@ for s in range(nb_seeds):
         fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
         fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-        fh.writelines(f"srun python -u -B train.py --save-dir 'test_fixed_queries/' 2>&1 ")
+        fh.writelines(f"srun python -u -B train.py --save-dir 'test_queries/' 2>&1 ")
 
     os.system("sbatch %s" % job_file)
     sleep(1)
