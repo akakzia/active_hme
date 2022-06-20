@@ -150,6 +150,8 @@ class GoalSampler:
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
         self.stats['nb_discovered'] = []
+        self.stats['nb_social_interventions'] = []
+        self.stats['nb_internalized_pairs'] = []
         keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:
