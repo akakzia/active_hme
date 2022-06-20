@@ -360,7 +360,7 @@ class HMERolloutWorker(RolloutWorker):
     
     def launch_autotelic_phase(self, agent_network, time_dict):
         """ Launch the autotelic episodes phase """
-        if len(self.stepping_stones_beyond_pairs_list) > 0 and len(agent_network.teacher.stepping_stones) == 0:
+        if len(self.stepping_stones_beyond_pairs_list) > 0 and len(agent_network.teacher.agent_stepping_stones) == 0:
             # internalize SP intervention
             generated_episodes = self.internalize_social_episodes(time_dict)
 
@@ -403,7 +403,7 @@ class HMERolloutWorker(RolloutWorker):
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.stepping_stones) > 0:
+        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.agent_stepping_stones) > 0:
             all_episodes = self.launch_social_phase(agent_network, time_dict)
             episodes_type = 'social'
         else:
