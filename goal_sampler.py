@@ -28,8 +28,8 @@ class GoalSampler:
 
         # Query arguments
         self.query_proba = 0.
-        self.min_queue_length = args.min_queue_length * MPI.COMM_WORLD.Get_size()
-        self.max_queue_length = args.max_queue_length * MPI.COMM_WORLD.Get_size()
+        self.min_queue_length = args.min_queue_length 
+        self.max_queue_length = args.max_queue_length
         self.beta = args.beta
         self.progress_function = args.progress_function
 
