@@ -47,7 +47,7 @@ for s in range(nb_seeds):
                 fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
                 fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-                fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --save-dir 'queries_q={q}_beta={beta}/' 2>&1 ")
+                fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --save-dir 'queries_q={q}_beta={beta}/' 2>&1 ")
 
             os.system("sbatch %s" % job_file)
             sleep(1)
