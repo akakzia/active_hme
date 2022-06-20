@@ -110,7 +110,8 @@ class HMERolloutWorker(RolloutWorker):
         self.to_remove_internalization = []
 
         self.nb_internalized_pairs = 0
-        self.nb_social_interventions = 0
+        self.global_social_interventions = 0
+        self.local_social_interventions = 0
 
         self.max_episodes = args.num_rollouts_per_mpi
         self.episode_duration = 100
@@ -354,7 +355,7 @@ class HMERolloutWorker(RolloutWorker):
                 
                 # all_episodes = updated_episodes + relabeled_episodes
                 all_episodes = relabeled_episodes
-            self.nb_social_interventions += 1
+            self.local_social_interventions += 1
         return all_episodes
     
     def launch_autotelic_phase(self, time_dict):
@@ -380,10 +381,11 @@ class HMERolloutWorker(RolloutWorker):
 
         # Syncronize counts
         self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
-        self.nb_social_interventions = MPI.COMM_WORLD.allreduce(self.nb_social_interventions, op=MPI.SUM)
+        self.global_social_interventions += MPI.COMM_WORLD.allreduce(self.local_social_interventions, op=MPI.SUM)
+        self.local_social_interventions = 0
         
         if MPI.COMM_WORLD.Get_rank() == 0:
-            self.goal_sampler.stats['nb_social_interventions'].append(self.nb_social_interventions)
+            self.goal_sampler.stats['nb_social_interventions'].append(self.global_social_interventions)
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
             self.goal_sampler.stats['query_proba'].append(self.goal_sampler.query_proba)
 
