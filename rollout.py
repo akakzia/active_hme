@@ -303,8 +303,8 @@ class HMERolloutWorker(RolloutWorker):
                     episode = self.generate_one_rollout(self.internalized_beyond, False, self.episode_duration)
                     current_episodes.append(episode)
                     success = episode['success'][-1]
-                    if success:
-                        self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
+                    # if success:
+                    #     self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
                 else:
                     raise Exception(f"unknown state : {self.state}")
             all_episodes.append(current_episodes)
@@ -358,26 +358,38 @@ class HMERolloutWorker(RolloutWorker):
             self.local_social_interventions += 1
         return all_episodes
     
-    def launch_autotelic_phase(self, time_dict):
+    def launch_autotelic_phase(self, agent_network, time_dict):
         """ Launch the autotelic episodes phase """
-        # Perform uniform autotelic episodes
-        t_i = time.time()
-        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-        time_dict['goal_sampler'] += time.time() - t_i
-        all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
-                                                true_eval=False,  # these are not offline evaluation episodes
-                                            )
+        if len(self.stepping_stones_beyond_pairs_list) > 0 and len(agent_network.teacher.stepping_stones) == 0:
+            # internalize SP intervention
+            generated_episodes = self.internalize_social_episodes(time_dict)
+
+            # Concatenate mini-episodes and perform data augmentation
+            updated_episodes = []
+            for episode in generated_episodes:
+                merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
+                updated_episodes.append(merged_mini_episodes)
+            
+            all_episodes = updated_episodes
+        else:
+            # Perform uniform autotelic episodes
+            t_i = time.time()
+            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            time_dict['goal_sampler'] += time.time() - t_i
+            all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                                    true_eval=False,  # these are not offline evaluation episodes
+                                                )
         return all_episodes
 
     def sync(self):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
         self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
-        self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
+        # self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
 
         # Remove elements that were successfully internalized
-        self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
-        self.to_remove_internalization = []
+        # self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
+        # self.to_remove_internalization = []
 
         # Syncronize counts
         self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
@@ -391,11 +403,11 @@ class HMERolloutWorker(RolloutWorker):
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba:
+        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.stepping_stones) > 0:
             all_episodes = self.launch_social_phase(agent_network, time_dict)
             episodes_type = 'social'
         else:
-            all_episodes = self.launch_autotelic_phase(time_dict)
+            all_episodes = self.launch_autotelic_phase(agent_network, time_dict)
             episodes_type = 'individual'
 
         self.sync()

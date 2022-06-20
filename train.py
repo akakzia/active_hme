@@ -136,6 +136,8 @@ def launch(args):
                 av_res = np.array(all_results).mean(axis=0)
                 av_rewards = np.array(all_rewards).mean(axis=0)
                 global_sr = np.mean(av_res)
+
+                agent_network.log(logger)
                 log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:
