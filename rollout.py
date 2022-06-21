@@ -381,7 +381,7 @@ class HMERolloutWorker(RolloutWorker):
         goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
         time_dict['goal_sampler'] += time.time() - t_i
         
-        if np.random.uniform() < self.autotelic_planning_proba and len(self.goal_sampler.discovered_goals) > 1:
+        if np.random.uniform() < self.autotelic_planning_proba and len(self.goal_sampler.discovered_goals) > 500:
             # generate intermediate goals 
             intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
             all_episodes = self.autotelic_planning(intermediate_goals, goals)
