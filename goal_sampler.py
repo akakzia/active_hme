@@ -70,6 +70,20 @@ class GoalSampler:
                 goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
                 goals = np.array(self.discovered_goals)[goal_ids]
         return goals
+    
+    def generate_intermediate_goals(self, goals):
+        """ Given an array of goals, uses goal evaluator to generate intermediate goals that maximize the value """
+        res = []
+        for eval_goal in goals:
+            repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
+            norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
+            ind = np.argpartition(norm_goals, -2)[-2:]
+            adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
+            res.append(adjacent_goal)
+        
+        res = np.array(res)
+
+        return res
 
     def update(self, episodes):
         """
@@ -165,6 +179,8 @@ class GoalSampler:
         for i in np.arange(1, n+1):
             self.stats['Eval_SR_{}'.format(i)] = []
             self.stats['Av_Rew_{}'.format(i)] = []
+            self.stats['# class_teacher {}'.format(i)] = []
+            self.stats['# class_agent {}'.format(i)] = []
         
         # Init for each stack class
         stack_classes = set(self.stacks_to_class.values())
@@ -177,15 +193,16 @@ class GoalSampler:
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
         self.stats['nb_discovered'] = []
-        self.stats['nb_social_interventions'] = []
         self.stats['nb_internalized_pairs'] = []
+        self.stats['proposed_ss'] = []
+        self.stats['proposed_beyond'] = []
         self.stats['query_proba'] = []
         keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:
             self.stats['t_{}'.format(k)] = []
 
-    def save(self, epoch, episode_count, av_res, av_rew, global_sr, time_dict):
+    def save(self, epoch, episode_count, av_res, av_rew, global_sr,  agent_stats, goals_per_class, proposed_ss, proposed_beyond, time_dict):
         self.stats['epoch'].append(epoch)
         self.stats['episodes'].append(episode_count)
         self.stats['global_sr'].append(global_sr)
@@ -198,6 +215,11 @@ class GoalSampler:
 
         for k, v in self.discovered_goals_per_stacks.items():
             self.stats[f'discovered_{k}'].append(v)
+        self.stats['proposed_ss'].append(proposed_ss)
+        self.stats['proposed_beyond'].append(proposed_beyond)
+        for k in goals_per_class.keys():
+            self.stats['# class_teacher {}'.format(k)].append(goals_per_class[k])
+            self.stats['# class_agent {}'.format(k)].append(agent_stats[k])
     
     def save_discovered_goals(self, bucket_path, epoch):
         # save list of discovered goals

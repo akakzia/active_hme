@@ -66,6 +66,8 @@ def get_args():
     parser.add_argument('--beta', type=int, default=50, help='test')
     parser.add_argument('--progress-function', type=str, default='mean', help='test')
 
+    parser.add_argument('--autotelic-planning-proba', type=float, default=0., help='Probability to perform planning')
+
     args = parser.parse_args()
 
     return args

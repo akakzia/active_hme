@@ -35,8 +35,8 @@ class RolloutWorker:
         if not true_eval:
             observation = self.env.unwrapped.reset_goal(goal=np.array(goals[0]))
         for i in range(goals.shape[0]):
-            # if true_eval:
-            observation = self.env.unwrapped.reset_goal(goal=np.array(goals[i]))
+            if true_eval:
+                observation = self.env.unwrapped.reset_goal(goal=np.array(goals[i]))
             obs = observation['observation']
             ag = observation['achieved_goal']
             ag_bin = observation['achieved_goal_binary']
@@ -110,12 +110,13 @@ class HMERolloutWorker(RolloutWorker):
         self.to_remove_internalization = []
 
         self.nb_internalized_pairs = 0
-        self.global_social_interventions = 0
-        self.local_social_interventions = 0
 
         self.max_episodes = args.num_rollouts_per_mpi
         self.episode_duration = 100
         self.strategy = args.strategy
+
+        self.autotelic_planning_proba = args.autotelic_planning_proba
+
 
         # Define goal sampler
         self.goal_sampler = goal_sampler
@@ -200,8 +201,7 @@ class HMERolloutWorker(RolloutWorker):
                         g=np.array(ep_g).copy(),
                         ag=np.array(ep_ag).copy(),
                         success=np.array(ep_success).copy(),
-                        rewards=np.array(ep_rewards).copy(),
-                        self_eval=evaluation)
+                        rewards=np.array(ep_rewards).copy())
 
         self.last_obs = observation_new
         self.last_episode = episode
@@ -219,9 +219,11 @@ class HMERolloutWorker(RolloutWorker):
                 if self.state == 'GoToFrontier':
                     if self.long_term_goal is None:
                         t_i = time.time()
-                        frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
-                        self.long_term_goal = random.choices(frontier_ag)[0]
-                        self.long_term_goal = apply_on_table_config(self.long_term_goal)
+                        # frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
+                        # self.long_term_goal = random.choices(frontier_ag)[0]
+                        self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config[:30], 1)), None)
+                        if self.long_term_goal is not None:
+                            self.long_term_goal = apply_on_table_config(self.long_term_goal)
                         # self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config, 1)), None)  # first element or None
                         if time_dict:
                             time_dict['goal_sampler'] += time.time() - t_i
@@ -237,8 +239,6 @@ class HMERolloutWorker(RolloutWorker):
                     if success and self.current_config == self.long_term_goal and self.strategy == 2:
                         self.state = 'Explore'
                     else:
-                        # Add stepping stone to agent's memory for internalization
-                        # self.update_ss_list(self.long_term_goal, agent_network.semantic_graph.semantic_operation)
                         self.reset()
 
                 elif self.state == 'Explore':
@@ -303,14 +303,49 @@ class HMERolloutWorker(RolloutWorker):
                     episode = self.generate_one_rollout(self.internalized_beyond, False, self.episode_duration)
                     current_episodes.append(episode)
                     success = episode['success'][-1]
-                    # if success:
-                    #     self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
+                    if success:
+                        self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
                 else:
                     raise Exception(f"unknown state : {self.state}")
             all_episodes.append(current_episodes)
 
         return all_episodes
     
+    def autotelic_planning(self, intermediate_goals, final_goals, evaluation=False, animated=False):
+        """ The agent uses the generated intermediate goals to pursue the sampled final goals """
+        all_episodes = []
+        for i_g, f_g in zip(intermediate_goals, final_goals):
+            self.reset()
+            current_episodes = []
+            while len(current_episodes) < 2:
+                if self.state == 'GoToFrontier':
+                    episode = self.generate_one_rollout(i_g, True, self.episode_duration, animated=animated)
+                    current_episodes.append(episode)
+
+                    success = episode['success'][-1]
+                    if success and self.current_config == tuple(i_g):
+                        self.state = 'Explore'
+                    else:
+                        self.reset()
+
+                elif self.state == 'Explore':
+                    episode = self.generate_one_rollout(f_g, evaluation, self.episode_duration, animated=animated)
+                    current_episodes.append(episode)
+                    success = episode['success'][-1]
+                else:
+                    raise Exception(f"unknown state : {self.state}")
+            all_episodes.append(current_episodes)
+
+        # Concatenate mini-episodes and perform data augmentation
+        updated_episodes = []
+        for episode in all_episodes:
+            merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items()}
+            # Relabel mini episodes according to final goal
+            merged_mini_episodes['g'][:] = merged_mini_episodes['g'][-1]
+            updated_episodes.append(merged_mini_episodes)
+
+        return updated_episodes
+
     def launch_social_phase(self, agent_network, time_dict):
         """ Launch the social episodes phase: 
         1/ If there are some remaining (stepping stones, beyond) from internalization, than the agent selects to rehearse
@@ -319,97 +354,70 @@ class HMERolloutWorker(RolloutWorker):
         # If list is not empty, than rehearse social interventions
         # Else, ask social partner
         if len(self.stepping_stones_beyond_pairs_list) > 0:
-            # internalize SP intervention
+            # internalize SP pairs
             generated_episodes = self.internalize_social_episodes(time_dict)
-
-            # Concatenate mini-episodes and perform data augmentation
-            updated_episodes = []
-            for episode in generated_episodes:
-                merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
-                updated_episodes.append(merged_mini_episodes)
-            
-            all_episodes = updated_episodes
-            # Augment episodes by relabeling using the last goal
-            if self.args.data_augmentation:
-                relabeled_episodes = updated_episodes.copy()
-                for i in range(len(relabeled_episodes)):
-                    relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
-                
-                all_episodes = relabeled_episodes
         else:
             # SP intervenes
             generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
-            # Concatenate mini-episodes and perform data augmentation
-            updated_episodes = []
-            for episode in generated_episodes:
-                merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
-                updated_episodes.append(merged_mini_episodes)
-            
-            all_episodes = updated_episodes
-            # Augment episodes by relabeling using the last goal
+        # Concatenate mini-episodes and perform data augmentation
+        updated_episodes = []
+        for episode in generated_episodes:
+            merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items()}
             if self.args.data_augmentation:
-                relabeled_episodes = updated_episodes.copy()
-                for i in range(len(relabeled_episodes)):
-                    relabeled_episodes[i]['g'][:] = relabeled_episodes[i]['g'][-1]
-                
-                # all_episodes = updated_episodes + relabeled_episodes
-                all_episodes = relabeled_episodes
-            self.local_social_interventions += 1
+                # Relabel mini episodes according to final goal
+                merged_mini_episodes['g'][:] = merged_mini_episodes['g'][-1]
+            updated_episodes.append(merged_mini_episodes)
+        
+        all_episodes = updated_episodes
         return all_episodes
     
-    def launch_autotelic_phase(self, agent_network, time_dict):
-        """ Launch the autotelic episodes phase """
-        if len(self.stepping_stones_beyond_pairs_list) > 0 and len(agent_network.teacher.agent_stepping_stones) == 0:
-            # internalize SP intervention
-            generated_episodes = self.internalize_social_episodes(time_dict)
-
-            # Concatenate mini-episodes and perform data augmentation
-            updated_episodes = []
-            for episode in generated_episodes:
-                merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items() if k!= 'self_eval'}
-                updated_episodes.append(merged_mini_episodes)
-            
-            all_episodes = updated_episodes
+    def launch_autotelic_phase(self, time_dict):
+        """ Launch the autotelic episodes phase
+        First sample goals. Than, compute the values of the goals. If value less than a threshold, than perform planning by 
+        rehearsing the frontier/beyond procedure """
+        # Perform uniform autotelic episodes
+        t_i = time.time()
+        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+        time_dict['goal_sampler'] += time.time() - t_i
+        
+        if np.random.uniform() < self.autotelic_planning_proba and len(self.goal_sampler.discovered_goals) > 1:
+            # generate intermediate goals 
+            intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
+            all_episodes = self.autotelic_planning(intermediate_goals, goals)
         else:
-            # Perform uniform autotelic episodes
-            t_i = time.time()
-            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-            time_dict['goal_sampler'] += time.time() - t_i
             all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                                     true_eval=False,  # these are not offline evaluation episodes
                                                 )
         return all_episodes
 
-    def sync(self):
+    def sync(self, query_proba):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
         self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
-        # self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
+        self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
 
         # Remove elements that were successfully internalized
-        # self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
-        # self.to_remove_internalization = []
+        self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
+        self.to_remove_internalization = []
 
         # Syncronize counts
         self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
-        self.global_social_interventions += MPI.COMM_WORLD.allreduce(self.local_social_interventions, op=MPI.SUM)
-        self.local_social_interventions = 0
         
         if MPI.COMM_WORLD.Get_rank() == 0:
-            self.goal_sampler.stats['nb_social_interventions'].append(self.global_social_interventions)
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
-            self.goal_sampler.stats['query_proba'].append(self.goal_sampler.query_proba)
+            self.goal_sampler.stats['query_proba'].append(query_proba)
 
 
     def train_rollout(self, agent_network, t, time_dict=None):
-        if t > 5 and np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.agent_stepping_stones) > 0:
+        # Anneal query proba if no stepping stones are available
+        query_proba = self.goal_sampler.query_proba if len(agent_network.teacher.agent_stepping_stones) > 0 else 0.
+        if t > 5 and np.random.uniform() < query_proba:
             all_episodes = self.launch_social_phase(agent_network, time_dict)
             episodes_type = 'social'
         else:
-            all_episodes = self.launch_autotelic_phase(agent_network, time_dict)
+            all_episodes = self.launch_autotelic_phase(time_dict)
             episodes_type = 'individual'
 
-        self.sync()
+        self.sync(query_proba)
         return all_episodes, episodes_type
-

@@ -130,6 +130,10 @@ def launch(args):
             all_rewards = MPI.COMM_WORLD.gather(rewards, root=0)
             time_dict['eval'] += time.time() - t_i
 
+            # synchronize goals count per class in teacher
+            synchronized_stats, sync_nb_ss, sync_nb_beyond = sync(agent_network.teacher.stats, agent_network.teacher.ss_interventions,
+                                                                  agent_network.teacher.beyond_interventions)
+
             # Logs
             if rank == 0:
                 assert len(all_results) == args.num_workers  # MPI test
@@ -138,7 +142,8 @@ def launch(args):
                 global_sr = np.mean(av_res)
 
                 agent_network.log(logger)
-                log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, time_dict)
+                log_and_save(goal_sampler, epoch, episode_count, av_res, av_rewards, global_sr, agent_network.stats, synchronized_stats, sync_nb_ss,
+                 sync_nb_beyond, time_dict)
                 # Saving policy models
                 if epoch % args.save_freq == 0:
                     policy.save(model_path, epoch)
@@ -146,13 +151,22 @@ def launch(args):
                 if rank==0: logger.info('\tEpoch #{}: SR: {}'.format(epoch, global_sr))
 
 
-def log_and_save( goal_sampler, epoch, episode_count, av_res, av_rew, global_sr, time_dict):
-    goal_sampler.save(epoch, episode_count, av_res, av_rew, global_sr, time_dict)
+def log_and_save( goal_sampler, epoch, episode_count, av_res, av_rew, global_sr, agent_stats, teacher_stats, proposed_ss, proposed_beyond, time_dict):
+    goal_sampler.save(epoch, episode_count, av_res, av_rew, global_sr, agent_stats, teacher_stats, proposed_ss, proposed_beyond, time_dict)
     for k, l in goal_sampler.stats.items():
         logger.record_tabular(k, l[-1])
     logger.dump_tabular()
 
-
+def sync(x, a, b):
+    """ x: dictionary of counts for every class_goal proposed by the teacher
+        return the synchronized dictionary among all cpus """
+    res = x.copy()
+    for k in x.keys():
+        res[k] = MPI.COMM_WORLD.allreduce(x[k], op=MPI.SUM)
+    sync_a = MPI.COMM_WORLD.allreduce(a, op=MPI.SUM)
+    sync_b = MPI.COMM_WORLD.allreduce(b, op=MPI.SUM)
+    return res, sync_a, sync_b
+    
 if __name__ == '__main__':
     # Prevent hyperthreading between MPI processes
     os.environ['OMP_NUM_THREADS'] = '1'
