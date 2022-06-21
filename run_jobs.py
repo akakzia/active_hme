@@ -13,25 +13,25 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-queues = [100]
-betas = [50]
+queues = [100, 200, 400]
+betas = [0, 50, 100, 1000]
 planning_probas = [0]
-nb_seeds = 1
+nb_seeds = 3
 
 for s in range(nb_seeds):
     for pp in planning_probas:
         for q in queues:
             for beta in betas:
-                job_file = os.path.join(job_directory, f"queries_q={q}_beta={beta}_pp={pp}%.slurm")
+                job_file = os.path.join(job_directory, f"exp_queries_q={q}_beta={beta}_pp={pp}%.slurm")
 
                 with open(job_file, 'w') as fh:
                     fh.writelines("#!/bin/bash\n")
                     fh.writelines("#SBATCH --account=kcr@v100\n")
-                    fh.writelines(f"#SBATCH --job-name=queries_q={q}_beta={beta}_pp={pp}\n")
-                    fh.writelines("#SBATCH --qos=qos_gpu-dev\n")
-                    fh.writelines(f"#SBATCH --output=queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
-                    fh.writelines(f"#SBATCH --error=queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
-                    fh.writelines("#SBATCH --time=1:59:59\n")
+                    fh.writelines(f"#SBATCH --job-name=exp_queries_q={q}_beta={beta}_pp={pp}\n")
+                    fh.writelines("#SBATCH --qos=qos_gpu-t3\n")
+                    fh.writelines(f"#SBATCH --output=exp_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
+                    fh.writelines(f"#SBATCH --error=exp_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
+                    fh.writelines("#SBATCH --time=19:59:59\n")
                     fh.writelines("#SBATCH --ntasks=24\n")
                     fh.writelines("#SBATCH --ntasks-per-node=1\n")
                     fh.writelines("#SBATCH --gres=gpu:1\n")
@@ -49,7 +49,7 @@ for s in range(nb_seeds):
                     fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
                     fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-                    fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --autotelic-planning-proba {pp} --save-dir 'queries_q={q}_beta={beta}/' 2>&1 ")
+                    fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --autotelic-planning-proba {pp} --save-dir 'exp_queries_q={q}_beta={beta}/' 2>&1 ")
 
                 os.system("sbatch %s" % job_file)
                 sleep(1)
