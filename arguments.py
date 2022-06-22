@@ -71,6 +71,8 @@ def get_args():
     parser.add_argument('--oracle-path', type=str, default='data/', help='test')
     parser.add_argument('--oracle-name', type=str, default='oracle_perm_block', help='test')
 
+    parser.add_argument('--use-her-on-social', type=bool, default=True, help='test')
+
     args = parser.parse_args()
 
     return args

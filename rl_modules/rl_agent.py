@@ -90,11 +90,18 @@ class RLAgent:
 
         # Create social replay buffer for social episodes
         # create the replay buffer
-        self.social_buffer = ReplayBuffer(env_params=self.env_params,
+        if self.args.apply_her_on_social:
+            self.social_buffer = ReplayBuffer(env_params=self.env_params,
                                           buffer_size=self.args.buffer_size,
-                                          sample_func=self.her_module.sample_transitions,
+                                          sample_func=self.her_module.sample_her_transitions,
                                           goal_sampler=self.goal_sampler
         )
+        else:
+            self.social_buffer = ReplayBuffer(env_params=self.env_params,
+                                            buffer_size=self.args.buffer_size,
+                                            sample_func=self.her_module.sample_transitions,
+                                            goal_sampler=self.goal_sampler
+            )
 
     def act(self, obs, ag, g, no_noise):
         with torch.no_grad():
