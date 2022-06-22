@@ -77,7 +77,7 @@ class GoalSampler:
         for eval_goal in goals:
             repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
             norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
-            ind = np.argpartition(norm_goals, -2)[-2:]
+            ind = np.argsort(norm_goals)[-2:]
             adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
             res.append(adjacent_goal)
         

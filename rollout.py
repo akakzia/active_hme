@@ -105,7 +105,8 @@ class HMERolloutWorker(RolloutWorker):
         super().__init__(env, policy, args) 
         # Agent memory to internalize SP intervention
         self.stepping_stones_beyond_pairs_list = []
-        
+        self.beyond_list = [] # used in autotelic planning
+
         # List from which to remove when internalization is succeeded
         self.to_remove_internalization = []
 
@@ -262,6 +263,7 @@ class HMERolloutWorker(RolloutWorker):
                         if not success and self.long_term_goal:
                             # Add pair to agent's memory
                             self.stepping_stones_beyond_pairs_list.append((self.long_term_goal, explore_goal))
+                            self.beyond_list.append(explore_goal)
                     if explore_goal is None or (not success and self.strategy !=3):
                         self.reset()
                         continue
@@ -376,16 +378,21 @@ class HMERolloutWorker(RolloutWorker):
         """ Launch the autotelic episodes phase
         First sample goals. Than, compute the values of the goals. If value less than a threshold, than perform planning by 
         rehearsing the frontier/beyond procedure """
-        # Perform uniform autotelic episodes
-        t_i = time.time()
-        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-        time_dict['goal_sampler'] += time.time() - t_i
-        
-        if np.random.uniform() < self.autotelic_planning_proba and len(self.goal_sampler.discovered_goals) > 500:
+        if np.random.uniform() < self.autotelic_planning_proba and len(self.beyond_list) > 0:
+            t_i = time.time()
+            norm_goals = self.goal_sampler.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond_list))
+            # Take indexes of goals with least value
+            ind = np.argsort(norm_goals)[:self.args.num_rollouts_per_mpi]
+            goals = np.array([self.beyond_list[i] for i in ind])
+            time_dict['goal_sampler'] += time.time() - t_i
             # generate intermediate goals 
             intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
             all_episodes = self.autotelic_planning(intermediate_goals, goals)
         else:
+            # Perform uniform autotelic episodes
+            t_i = time.time()
+            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            time_dict['goal_sampler'] += time.time() - t_i
             all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                                     true_eval=False,  # these are not offline evaluation episodes
                                                 )
@@ -395,6 +402,7 @@ class HMERolloutWorker(RolloutWorker):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
         self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
+        self.beyond_list = list(set(MPI.COMM_WORLD.allreduce(self.beyond_list)))
         self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
 
         # Remove elements that were successfully internalized
