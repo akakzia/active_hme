@@ -22,11 +22,11 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
           [0.3010, 0.245, 0.33], [0.635, 0.078, 0.184], [0.35, 0.78, 0.504]]
 cmap = plt.get_cmap('tab20b')
 colors = np.array(cmap.colors)[[0, 17, 2, 16, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
-folder = 'rebuttal_results_semantic'
+folder = 'exp_01'
 
-RESULTS_PATH = '/home/ahmed/Documents/final_year/ALOE2022/rlgraph/' + folder + '/'
-SAVE_PATH = '/home/ahmed/Documents/final_year/ALOE2022/rlgraph/plots/'
-TO_PLOT = ['semantic_goals']
+RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/' + folder + '/'
+SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/'
+TO_PLOT = ['exp_01']
 
 NB_CLASSES = 5 # 12 for 5 blocks
 
@@ -312,7 +312,7 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                      ncol=5,
                      fancybox=True,
                      shadow=True,
-                     prop={'size': 70, 'weight': 'bold'},
+                     prop={'size': 30, 'weight': 'bold'},
                      markerscale=1,
                      )
     for l in leg.get_lines():
@@ -356,11 +356,11 @@ if __name__ == '__main__':
 
         max_len, max_seeds, min_len, min_seeds = check_length_and_seeds(experiment_path=experiment_path)
 
-        # conditions = ['full_gn', 'interaction_network_2', 'relation_network', 'deep_sets', 'flat']
-        # labels = ['S-GN', 'S-IN', 'S-RN', 'S-DS', 'S-Flat']
-        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref='full_gn')
+        conditions = [f'exp_queries_q={q}_beta={b}' for q in [100, 200, 400] for b in [50]]
+        labels = [f'q={q}_beta={b}' for q in [100, 200, 400] for b in [50]]
+        get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # plot_sr_av(max_len, experiment_path, 'flat')
-        plot_sr_av_all(max_len, experiment_path)
+        # plot_sr_av_all(max_len, experiment_path)
 
 
         # if PLOT == 'Architecture':
