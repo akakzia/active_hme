@@ -14,22 +14,21 @@ scratch = os.environ['SCRATCH']
 mkdir_p(job_directory)
 
 q = 200
-beta = 0
-pp = 0
-graphs = ['oracle_block']
+beta = 50
+planning_probas = [0.1, 0.3]
 nb_seeds = 3
 
 for s in range(nb_seeds):
-    for graph in graphs:
-        job_file = os.path.join(job_directory, f"{graph}_queries_q={q}_beta={beta}_pp={pp}%.slurm")
+    for pp in planning_probas:
+        job_file = os.path.join(job_directory, f"planning_queries_q={q}_beta={beta}_pp={pp}%.slurm")
 
         with open(job_file, 'w') as fh:
             fh.writelines("#!/bin/bash\n")
             fh.writelines("#SBATCH --account=kcr@v100\n")
-            fh.writelines(f"#SBATCH --job-name={graph}_queries_q={q}_beta={beta}_pp={pp}\n")
+            fh.writelines(f"#SBATCH --job-name=planning_queries_q={q}_beta={beta}_pp={pp}\n")
             fh.writelines("#SBATCH --qos=qos_gpu-t3\n")
-            fh.writelines(f"#SBATCH --output={graph}_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
-            fh.writelines(f"#SBATCH --error={graph}_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
+            fh.writelines(f"#SBATCH --output=planning_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
+            fh.writelines(f"#SBATCH --error=planning_queries_q={q}_beta={beta}_pp={pp}_%_%j.out\n")
             fh.writelines("#SBATCH --time=19:59:59\n")
             fh.writelines("#SBATCH --ntasks=24\n")
             fh.writelines("#SBATCH --ntasks-per-node=1\n")
@@ -48,7 +47,7 @@ for s in range(nb_seeds):
             fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
             fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-            fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --autotelic-planning-proba {pp} --oracle-name {graph} --save-dir '{graph}_queries_q={q}_beta={beta}/' 2>&1 ")
+            fh.writelines(f"srun python -u -B train.py --max-queue-length {q} --beta {beta} --autotelic-planning-proba {pp} --save-dir 'planning_queries_q={q}_beta={beta}/' 2>&1 ")
 
         os.system("sbatch %s" % job_file)
         sleep(1)
