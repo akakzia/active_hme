@@ -68,6 +68,9 @@ def get_args():
 
     parser.add_argument('--autotelic-planning-proba', type=float, default=0., help='Probability to perform planning')
 
+    parser.add_argument('--oracle-path', type=str, default='data/', help='test')
+    parser.add_argument('--oracle-name', type=str, default='oracle_perm_block', help='test')
+
     args = parser.parse_args()
 
     return args

@@ -10,10 +10,6 @@ from graph.SemanticOperation import SemanticOperation,config_permutations, confi
 import random
 
 class SemanticGraph:
-
-    ORACLE_PATH = 'data/'
-    ORACLE_NAME = 'oracle_perm_block'
-
     def __init__(self,configs : bidict,graph :nk.graph,nb_blocks,GANGSTR=True,edges_infos=None,args=None):
         self.configs = configs
         if edges_infos == None:
@@ -55,9 +51,9 @@ class SemanticGraph:
     def __getstate__(self):
         return {k:v for (k, v) in self.__dict__.items() if not isinstance(v,nk.graph.Graph)}
 
-    def load_oracle(nb_blocks:int):
-        return SemanticGraph.load(SemanticGraph.ORACLE_PATH,
-                                f'{SemanticGraph.ORACLE_NAME}{nb_blocks}')
+    def load_oracle(oracle_path, oracle_name, nb_blocks:int):
+        return SemanticGraph.load(oracle_path,
+                                f'{oracle_name}{nb_blocks}')
 
 ##########################################
     # Shortest path operations   : 
