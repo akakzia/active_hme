@@ -382,6 +382,8 @@ class HMERolloutWorker(RolloutWorker):
             norm_goals = self.goal_sampler.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond_list))
             # Take indexes of goals with least value
             ind = np.argsort(norm_goals)[:self.args.num_rollouts_per_mpi]
+            if len(ind) == 1:
+                ind = np.repeat(ind, repeats=self.args.num_rollouts_per_mpi, axis=0)
             goals = np.array([self.beyond_list[i] for i in ind])
             time_dict['goal_sampler'] += time.time() - t_i
             # generate intermediate goals 
