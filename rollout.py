@@ -354,7 +354,7 @@ class HMERolloutWorker(RolloutWorker):
         # Check the list of internalized pairs
         # If list is not empty, than rehearse social interventions
         # Else, ask social partner
-        if len(self.stepping_stones_beyond_pairs_list) > 0:
+        if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0:
             # internalize SP pairs
             generated_episodes = self.internalize_social_episodes(time_dict)
         else:
