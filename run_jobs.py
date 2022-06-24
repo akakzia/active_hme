@@ -13,8 +13,8 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-queues = [100, 200, 400]
-betas = [0, 50, 100, 1000]
+queues = [200]
+betas = [20, 200, 300]
 planning_probas = [0]
 nb_seeds = 3
 
