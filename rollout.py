@@ -429,5 +429,6 @@ class HMERolloutWorker(RolloutWorker):
             all_episodes = self.launch_autotelic_phase(time_dict)
             episodes_type = 'individual'
 
-        self.sync(query_proba)
+        if self.args.beta > 0:
+            self.sync(query_proba)
         return all_episodes, episodes_type
