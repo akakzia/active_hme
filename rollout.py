@@ -220,10 +220,11 @@ class HMERolloutWorker(RolloutWorker):
                 if self.state == 'GoToFrontier':
                     if self.long_term_goal is None:
                         t_i = time.time()
-                        # frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
-                        # self.long_term_goal = random.choices(frontier_ag)[0]
-                        self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config[:30], 1)), None)
+                        frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
+                        self.long_term_goal = random.choices(frontier_ag)[0]
+                        # self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config[:30], 1)), None)
                         if self.long_term_goal is not None:
+                            agent_network.teacher.ss_interventions += 1
                             self.long_term_goal = apply_on_table_config(self.long_term_goal)
                         if time_dict:
                             time_dict['goal_sampler'] += time.time() - t_i
