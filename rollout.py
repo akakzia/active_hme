@@ -403,16 +403,17 @@ class HMERolloutWorker(RolloutWorker):
     def sync(self, query_proba):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
-        self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
-        self.beyond_list = list(set(MPI.COMM_WORLD.allreduce(self.beyond_list)))
-        self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
+        if self.args.beta > 0:
+            self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
+            self.beyond_list = list(set(MPI.COMM_WORLD.allreduce(self.beyond_list)))
+            self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
 
-        # Remove elements that were successfully internalized
-        self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
-        self.to_remove_internalization = []
+            # Remove elements that were successfully internalized
+            self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
+            self.to_remove_internalization = []
 
-        # Syncronize counts
-        self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
+            # Syncronize counts
+            self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
         
         if MPI.COMM_WORLD.Get_rank() == 0:
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
@@ -429,6 +430,5 @@ class HMERolloutWorker(RolloutWorker):
             all_episodes = self.launch_autotelic_phase(time_dict)
             episodes_type = 'individual'
 
-        if self.args.beta > 0:
-            self.sync(query_proba)
+        self.sync(query_proba)
         return all_episodes, episodes_type
