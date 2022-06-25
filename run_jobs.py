@@ -14,7 +14,7 @@ scratch = os.environ['SCRATCH']
 mkdir_p(job_directory)
 
 queues = [200]
-betas = [20, 200, 300]
+betas = [50, 100, 1000]
 planning_probas = [0]
 nb_seeds = 3
 
