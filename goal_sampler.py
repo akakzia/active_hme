@@ -92,7 +92,7 @@ class GoalSampler:
         Label each episode with the last ag (for buffer storage)
         """
         # Update the goal memory
-        self.update_goal_memory(episodes)
+        episodes = self.update_goal_memory(episodes)
 
         if self.rank == 0.:
             # Compute goal values
@@ -156,8 +156,13 @@ class GoalSampler:
 
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
+
+        for e in episodes:
+            # Set final reward
+            e['final_reward'] = np.zeros_like(e['rewards']) + e['rewards'][-1]
         
         self.sync()
+        return episodes
 
     def sync(self):
         """ Synchronize the goal sampler's attributes between all workers """

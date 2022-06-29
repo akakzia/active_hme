@@ -216,6 +216,7 @@ class RLAgent:
         _, transitions['anchor_g'] = self._preproc_og(o, anchor_g)
 
         anchor_rewards = transitions['anchor_r']
+        final_rewards = transitions['final_reward']
 
         # apply normalization
         obs_norm = self.o_norm.normalize(transitions['obs'])
@@ -228,7 +229,7 @@ class RLAgent:
 
         update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
                     self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
-                    self.args)
+                    final_rewards, self.args)
 
     def get_goal_values(self, goals):
         g_tensor = torch.tensor(goals, dtype=torch.float32)
