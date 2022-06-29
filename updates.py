@@ -108,6 +108,7 @@ def update_gnns(model, policy_optim, critic_optim, value_optim, alpha, log_alpha
 
         anchor_g_norm_tensor = anchor_g_norm_tensor.cuda()
         anchor_r_tensor = anchor_r_tensor.cuda()
+        final_r_tensor = final_r_tensor.cuda()
 
     with torch.no_grad():
         model.forward_pass(obs_next_norm_tensor, ag_next_norm_tensor, g_norm_tensor)
