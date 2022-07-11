@@ -51,7 +51,7 @@ class GoalEvaluator():
         """ Use the selected normalization technique to normalize goals """
 
         if self.normalization_technique == 'linear_fixed':
-            max_value = 250
+            max_value = 5
             min_value = 0
             norm_goals = np.clip((goal_values - min_value)/(max_value - min_value), a_min=0., a_max=1.)
         elif self.normalization_technique == 'linear_moving':
