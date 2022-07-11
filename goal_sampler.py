@@ -45,6 +45,8 @@ class GoalSampler:
 
         self.use_stability_condition = args.use_stability_condition
 
+        self.attention_to_internalized_pairs = args.attention_to_internalized_pairs
+
         self.init_stats()
     
     def setup_policy(self, policy):
@@ -127,6 +129,8 @@ class GoalSampler:
             for e in all_episode_list:
                 # Retrive last achieved goal
                 last_ag = e['ag'][-1]
+                # Retrieve goal
+                goal = e['g'][-1]
                 if self.use_stability_condition:
                     # Compute boolean conditions to determine the discovered goal stability 
                     # 1: the goal is stable for the last 10 steps
@@ -156,6 +160,19 @@ class GoalSampler:
 
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
+                # Add goal if not already encountered (to include internalized pairs in discovere buffer)
+                # second condition to avoid adding unreasonable goals
+                if self.attention_to_internalized_pairs and str(goal) not in self.discovered_goals_str and self.nb_discovered_goals > 0: 
+                    self.discovered_goals.append(goal.copy())
+                    self.discovered_goals_str.append(str(goal))
+                    self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
+
+                    # Check to which stack class corresponds the discovered goal
+                    above_predicates = last_ag[10:30]
+
+                    # Increment number of discovered goals (to increment the id !)
+                    self.nb_discovered_goals += 1
+
 
         for e in episodes:
             # Set final reward

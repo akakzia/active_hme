@@ -118,6 +118,8 @@ class HMERolloutWorker(RolloutWorker):
 
         self.autotelic_planning_proba = args.autotelic_planning_proba
 
+        self.attention_to_internalized_pairs = args.attention_to_internalized_pairs
+
 
         # Define goal sampler
         self.goal_sampler = goal_sampler
@@ -355,7 +357,7 @@ class HMERolloutWorker(RolloutWorker):
         # Check the list of internalized pairs
         # If list is not empty, than rehearse social interventions
         # Else, ask social partner
-        if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0:
+        if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0 and self.attention_to_internalized_pairs:
             # internalize SP pairs
             generated_episodes = self.internalize_social_episodes(time_dict)
         else:

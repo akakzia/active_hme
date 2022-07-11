@@ -73,6 +73,8 @@ def get_args():
 
     parser.add_argument('--apply-her-on-social', type=bool, default=True, help='test')
 
+    parser.add_argument('--attention-to-internalized-pairs', type=bool, default=False, help='test')
+
     args = parser.parse_args()
 
     return args
