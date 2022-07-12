@@ -9,7 +9,6 @@ import networkit as nk
 class SpGraph():
     def __init__(self,args):
         self.oracle_graph = SemanticGraph.load_oracle(args.oracle_path, args.oracle_name, args.n_blocks)
-        self.strategy = args.strategy
         self.args = args
         self.agent_frontier = {} # store configuration through networkit node_id from agent_graph
         self.agent_stepping_stones = {}
@@ -94,18 +93,7 @@ class SpGraph():
 
         reachable_frontier = reachable_terminal + reachable_stepping_stones
         try:
-            if self.strategy in [0, 3]:
-                # If strategy is Frontier
-                # If strategy is Beyond (first sample in frontier without giving it to the agent)
-                goals = random.choices(reachable_frontier, k=k)
-            elif self.strategy == 1:
-                # If strategy is Frontier and Stop
-                goals = random.choices(reachable_terminal, k=k)
-            elif self.strategy == 2:
-                # If strategy is Frontier and Beyond
-                goals = random.choices(reachable_stepping_stones, k=k)
-            else:
-                raise NotImplementedError
+            goals = random.choices(reachable_stepping_stones, k=k)
             for g in goals:
                 try:
                     c = self.config_to_class[str(np.array(g).reshape(1, -1))]

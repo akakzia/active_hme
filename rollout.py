@@ -118,7 +118,6 @@ class HMERolloutWorker(RolloutWorker):
 
         self.max_episodes = args.num_rollouts_per_mpi
         self.episode_duration = 100
-        self.strategy = args.strategy
 
         self.autotelic_planning_proba = args.autotelic_planning_proba
 
@@ -159,10 +158,7 @@ class HMERolloutWorker(RolloutWorker):
         else:
             self.internalized_ss = None
             self.internalized_beyond = None
-        if self.strategy == 3:
-            self.state = 'Explore'
-        else:
-            self.state ='GoToFrontier'
+        self.state ='GoToFrontier'
 
     def generate_one_rollout(self, goal,evaluation, episode_duration, animated=False):
         g = np.array(goal)
@@ -235,7 +231,7 @@ class HMERolloutWorker(RolloutWorker):
                         if time_dict:
                             time_dict['goal_sampler'] += time.time() - t_i
                         # if can't find frontier goal, explore directly
-                        if self.long_term_goal is None or (self.long_term_goal == self.current_config and self.strategy == 2):
+                        if self.long_term_goal is None or (self.long_term_goal == self.current_config):
                             self.state = 'Explore'
                             continue
                     no_noise = np.random.uniform() > self.exploration_noise_prob
@@ -243,21 +239,14 @@ class HMERolloutWorker(RolloutWorker):
                     current_episodes.append(episode)
 
                     success = episode['success'][-1]
-                    if success and self.current_config == self.long_term_goal and self.strategy == 2:
+                    if success and self.current_config == self.long_term_goal:
                         self.state = 'Explore'
                     else:
                         self.reset()
 
                 elif self.state == 'Explore':
                     t_i = time.time()
-                    # if strategy is Beyond, first sample goal in frontier than sample a goal beyond
-                    # only propose the beyond goal
-                    if self.strategy == 3:
-                        last_ag = next(iter(agent_network.sample_goal_in_frontier(self.current_config, 1)), None)
-                        if last_ag is None:
-                            last_ag = tuple(self.last_obs['achieved_goal'])
-                    else:
-                        last_ag = tuple(self.last_obs['achieved_goal'][:30])
+                    last_ag = tuple(self.last_obs['achieved_goal'][:30])
                     explore_goal = next(iter(agent_network.sample_from_frontier(last_ag, 1)), None)  # first element or None
                     if time_dict is not None:
                         time_dict['goal_sampler'] += time.time() - t_i
@@ -270,15 +259,9 @@ class HMERolloutWorker(RolloutWorker):
                             # Add pair to agent's memory
                             self.stepping_stones_beyond_pairs_list.append((self.long_term_goal, explore_goal))
                             self.beyond_list.append(explore_goal)
-                    if explore_goal is None or (not success and self.strategy !=3):
+                    if explore_goal is None or not success:
                         self.reset()
                         continue
-                    # if strategy is Beyond and goal not reached, then keep performing rollout until budget ends
-                    elif self.strategy == 3 and not success:
-                        while not success and len(current_episodes) < self.max_episodes:
-                            episode = self.generate_one_rollout(explore_goal, False, self.episode_duration)
-                            current_episodes.append(episode)
-                            success = episode['success'][-1]
                 else:
                     raise Exception(f"unknown state : {self.state}")
             
@@ -299,7 +282,7 @@ class HMERolloutWorker(RolloutWorker):
                     current_episodes.append(episode)
 
                     success = episode['success'][-1]
-                    if success and self.current_config == self.internalized_ss and self.strategy == 2:
+                    if success and self.current_config == self.internalized_ss:
                         self.state = 'Explore'
                     else:
                         self.reset()
