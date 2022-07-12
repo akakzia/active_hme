@@ -45,7 +45,10 @@ class GoalSampler:
 
         self.use_stability_condition = args.use_stability_condition
 
-        self.attention_to_internalized_pairs = args.attention_to_internalized_pairs
+        self.internalization_strategy = args.internalization_strategy
+        self.internalization_threshold = args.internalization_threshold
+        self.ss_b_pairs = []
+        self.beyond = []
 
         self.init_stats()
     
@@ -73,20 +76,6 @@ class GoalSampler:
                 goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
                 goals = np.array(self.discovered_goals)[goal_ids]
         return goals
-    
-    def generate_intermediate_goals(self, goals):
-        """ Given an array of goals, uses goal evaluator to generate intermediate goals that maximize the value """
-        res = []
-        for eval_goal in goals:
-            repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
-            norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
-            ind = np.argsort(norm_goals)[-2:]
-            adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
-            res.append(adjacent_goal)
-        
-        res = np.array(res)
-
-        return res
 
     def update(self, episodes):
         """
@@ -126,17 +115,17 @@ class GoalSampler:
                     # Compute boolean conditions to determine the discovered goal stability 
                     # 1: the goal is stable for the last 10 steps
                     condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag'][-10:]]) == 10.
-                    # 2: Gripper is far from all objects
-                    last_obs = e['obs'][-1]
-                    pos_gripper = last_obs[:3]
-                    pos_objects = [last_obs[10 + 15 * i: 13 + 15 * i] for i in range(5)]
-                    condition_far = np.sum([np.linalg.norm(pos_gripper - pos_ob) >= 0.09 for pos_ob in pos_objects]) == 5.
+                    # # 2: Gripper is far from all objects
+                    # last_obs = e['obs'][-1]
+                    # pos_gripper = last_obs[:3]
+                    # pos_objects = [last_obs[10 + 15 * i: 13 + 15 * i] for i in range(5)]
+                    # condition_far = np.sum([np.linalg.norm(pos_gripper - pos_ob) >= 0.09 for pos_ob in pos_objects]) == 5.
                 else:
                     # Always true
                     condition_stability = True
-                    condition_far = True
+                    # condition_far = True
                 # Add last achieved goal to memory if first time encountered
-                if str(last_ag) not in self.discovered_goals_str and condition_stability and condition_far:
+                if str(last_ag) not in self.discovered_goals_str and condition_stability:
                     self.discovered_goals.append(last_ag.copy())
                     self.discovered_goals_str.append(str(last_ag))
                     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
@@ -152,18 +141,13 @@ class GoalSampler:
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
-                # second condition to avoid adding unreasonable goals
-                # if self.attention_to_internalized_pairs and str(goal) not in self.discovered_goals_str and self.nb_discovered_goals > 0: 
-                #     self.discovered_goals.append(goal.copy())
-                #     self.discovered_goals_str.append(str(goal))
-                #     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
+                if self.internalization_strategy > 0 and str(goal) not in self.discovered_goals_str: 
+                    self.discovered_goals.append(goal.copy())
+                    self.discovered_goals_str.append(str(goal))
+                    self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
 
-                #     # Check to which stack class corresponds the discovered goal
-                #     above_predicates = last_ag[10:30]
-
-                #     # Increment number of discovered goals (to increment the id !)
-                #     self.nb_discovered_goals += 1
-
+                    # Increment number of discovered goals (to increment the id !)
+                    self.nb_discovered_goals += 1
 
         for e in episodes:
             # Set final reward
@@ -195,6 +179,37 @@ class GoalSampler:
         self.values_goals = MPI.COMM_WORLD.bcast(self.values_goals, root=0)
         self.values_goals = self.values_goals[-self.max_queue_length:]
         # self.query_proba = MPI.COMM_WORLD.bcast(self.query_proba, root=0)
+
+    def update_internalization(self, ss_b_pairs, b):
+        """ Update lists of stepping stone / beyond and beyond goals """
+        self.ss_b_pairs = ss_b_pairs
+        self.beyond = b
+
+    def do_internalization(self):
+        """ Decide whether to do internalization or not
+        Check the list of beyond goals, evaluate them
+        Return True if at least one value is below a threshold """
+        if len(self.beyond) == 0:
+            return False, None
+        norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond))
+        do_internalization = (norm_values < self.internalization_threshold).any()
+        ind = np.random.choice(np.argsort(norm_values)[:5], size=2)
+        return do_internalization, ind
+
+
+    def generate_intermediate_goals(self, goals):
+        """ Given an array of goals, uses goal evaluator to generate intermediate goals that maximize the value """
+        res = []
+        for eval_goal in goals:
+            repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
+            norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
+            ind = np.argsort(norm_goals)[-2:]
+            adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
+            res.append(adjacent_goal)
+        
+        res = np.array(res)
+
+        return res
 
     def init_stats(self):
         self.stats = dict()

@@ -112,7 +112,7 @@ class HMERolloutWorker(RolloutWorker):
         self.beyond_list = [] # used in autotelic planning
 
         # List from which to remove when internalization is succeeded
-        self.to_remove_internalization = []
+        # self.to_remove_internalization = []
 
         self.nb_internalized_pairs = 0
 
@@ -121,7 +121,7 @@ class HMERolloutWorker(RolloutWorker):
 
         self.autotelic_planning_proba = args.autotelic_planning_proba
 
-        self.attention_to_internalized_pairs = args.attention_to_internalized_pairs
+        self.internalization_strategy = args.internalization_strategy
 
 
         # Define goal sampler
@@ -153,11 +153,11 @@ class HMERolloutWorker(RolloutWorker):
         self.last_obs = self.env.unwrapped.reset_goal(goal=np.array([None]))
         self.dijkstra_to_goal = None
         # Internalization
-        if len(self.stepping_stones_beyond_pairs_list) > 0:
-            (self.internalized_ss, self.internalized_beyond) = random.choices(self.stepping_stones_beyond_pairs_list, k=1)[0]
-        else:
-            self.internalized_ss = None
-            self.internalized_beyond = None
+        # if len(self.stepping_stones_beyond_pairs_list) > 0:
+        #     (self.internalized_ss, self.internalized_beyond) = random.choices(self.stepping_stones_beyond_pairs_list, k=1)[0]
+        # else:
+        #     self.internalized_ss = None
+        #     self.internalized_beyond = None
         self.state ='GoToFrontier'
 
     def generate_one_rollout(self, goal,evaluation, episode_duration, animated=False):
@@ -294,8 +294,8 @@ class HMERolloutWorker(RolloutWorker):
                     episode = self.generate_one_rollout(self.internalized_beyond, False, self.episode_duration)
                     current_episodes.append(episode)
                     success = episode['success'][-1]
-                    if success:
-                        self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
+                    # if success:
+                    #     self.to_remove_internalization.append((self.internalized_ss, self.internalized_beyond))
                 else:
                     raise Exception(f"unknown state : {self.state}")
             all_episodes.append(current_episodes)
@@ -371,13 +371,29 @@ class HMERolloutWorker(RolloutWorker):
         #     intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
         #     all_episodes = self.autotelic_planning(intermediate_goals, goals)
         # else:
-        # Perform uniform autotelic episodes
-        t_i = time.time()
-        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-        time_dict['goal_sampler'] += time.time() - t_i
-        all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
-                                             true_eval=False,  # these are not offline evaluation episodes
-                                            )
+        
+        # Decide whether to do internalization
+        do_internalization, goal_ids = self.goal_sampler.do_internalization()
+        if do_internalization and self.internalization_strategy > 1:
+            # perform internalization
+            if self.internalization_strategy == 2:
+                self.internalized_ss, self.internalized_beyond = self.stepping_stones_beyond_pairs_list[goal_ids[0]]
+                generated_episodes = self.internalize_social_episodes(time_dict)
+
+                all_episodes = merge_mini_episodes_and_relabel(generated_episodes)
+            elif self.internalization_strategy == 3:
+                goals = np.array(self.beyond_list)[goal_ids]
+                all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                                true_eval=False,  # these are not offline evaluation episodes
+                                                )
+        else:
+            # Perform uniform autotelic episodes
+            t_i = time.time()
+            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            time_dict['goal_sampler'] += time.time() - t_i
+            all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                                true_eval=False,  # these are not offline evaluation episodes
+                                                )
         return all_episodes
 
     def sync(self):
@@ -386,14 +402,17 @@ class HMERolloutWorker(RolloutWorker):
         if self.args.beta > 0:
             self.stepping_stones_beyond_pairs_list = list(set(MPI.COMM_WORLD.allreduce(self.stepping_stones_beyond_pairs_list)))
             self.beyond_list = list(set(MPI.COMM_WORLD.allreduce(self.beyond_list)))
-            self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
+            # self.to_remove_internalization = list(set(MPI.COMM_WORLD.allreduce(self.to_remove_internalization)))
 
             # Remove elements that were successfully internalized
-            self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
-            self.to_remove_internalization = []
+            # self.stepping_stones_beyond_pairs_list = [e for e in self.stepping_stones_beyond_pairs_list if e not in self.to_remove_internalization]
+            # self.to_remove_internalization = []
 
             # Syncronize counts
             self.nb_internalized_pairs = len(self.stepping_stones_beyond_pairs_list)
+
+            # Send internalized goals to goal sampler
+            self.goal_sampler.update_internalization(ss_b_pairs=self.stepping_stones_beyond_pairs_list, b=self.beyond_list)
         
         if MPI.COMM_WORLD.Get_rank() == 0:
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)

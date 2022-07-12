@@ -54,12 +54,12 @@ def get_args():
 
     # the goal evaluator arguments
     parser.add_argument('--normalization-technique', type=str, default='linear_fixed', help='[linear_fixed, linear_moving, mixed]')
-    parser.add_argument('--use-stability-condition', type=bool, default=False, help='only consider stable goals as discovered')
+    parser.add_argument('--use-stability-condition', type=bool, default=True, help='only consider stable goals as discovered')
     
     parser.add_argument('--data-augmentation', type=bool, default=True, help='Augment guided episodes by relabeling')
 
     parser.add_argument('--min-queue-length', type=int, default=50, help='test')
-    parser.add_argument('--max-queue-length', type=int, default=100, help='test')
+    parser.add_argument('--max-queue-length', type=int, default=200, help='test')
     parser.add_argument('--beta', type=int, default=50, help='test')
     parser.add_argument('--progress-function', type=str, default='mean', help='test')
 
@@ -70,7 +70,8 @@ def get_args():
 
     parser.add_argument('--apply-her-on-social', type=bool, default=True, help='test')
 
-    parser.add_argument('--attention-to-internalized-pairs', type=bool, default=False, help='test')
+    parser.add_argument('--internalization-strategy', type=int, default=0, help='0: None; 1, 2, 3, 4 to be described later')
+    parser.add_argument('--internalization-threshold', type=float, default=0.5, help='test')
 
     parser.add_argument('--n-freeplay-epochs', type=int, default=5, help='test')
 
