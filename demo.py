@@ -23,9 +23,13 @@ def get_env_params(env):
     return params
 
 if __name__ == '__main__':
-    num_eval = 1
-    path = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/value_network/agent_3/1/models/'
-    model_path = path + 'model_130.pt'
+    directory_name = 'no_att_q=200_beta=20'
+    epoch = 70
+
+    n_eval = 50
+
+    path = f'/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/internalization_study/{directory_name}/1/models/'
+    model_path = path + f'model_{epoch}.pt'
 
     args = get_args()
 
@@ -56,17 +60,17 @@ if __name__ == '__main__':
     rollout_worker = RolloutWorker(env, policy, args)
 
     eval_goals = []
-    instructions = ['stack_5'] * 5
+    instructions = ['stack_4', 'stack_5'] * n_eval
     for instruction in instructions:
         eval_goal = get_eval_goals(instruction, n=args.n_blocks)
         eval_goals.append(eval_goal.squeeze(0))
     eval_goals = np.array(eval_goals)
 
     all_results = []
-    for i in range(num_eval):
-        episodes = rollout_worker.generate_rollout(eval_goals, true_eval=True, animated=True)
-        results = np.array([e['rewards'][-1] == 5. for e in episodes])
-        all_results.append(results)
+
+    episodes = rollout_worker.generate_rollout(eval_goals, true_eval=True, animated=False)
+    results = np.array([e['rewards'][-1] == args.n_blocks for e in episodes])
+    all_results.append(results)
 
     results = np.array(all_results)
     print('Av Success Rate: {}'.format(results.mean()))
