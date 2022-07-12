@@ -37,8 +37,8 @@ class SpGraph():
     
         neighbours = self.oracle_graph.iterNeighbors(config)
         for neighbour in neighbours:
-            # if not agent_graph.hasNode(neighbour):
-            if not agent_graph.hasEdge(config, neighbour):
+            if not agent_graph.hasNode(neighbour):
+            # if not agent_graph.hasEdge(config, neighbour):
                 return True
         return False
 
@@ -51,8 +51,8 @@ class SpGraph():
 
         neighbours = self.oracle_graph.iterNeighbors(config)
         for neighbour in neighbours:
-            # if not agent_graph.hasNode(neighbour):
-            if not agent_graph.hasEdge(config, neighbour):
+            if not agent_graph.hasNode(neighbour):
+            # if not agent_graph.hasEdge(config, neighbour):
                 return True
         return False
 
@@ -121,7 +121,8 @@ class SpGraph():
         to_explore = []
         to_exploit = []
         for neighbour in self.oracle_graph.iterNeighbors(node):
-            if not agent_graph.hasEdge(node,neighbour):
+            # if not agent_graph.hasEdge(node,neighbour):
+            if not agent_graph.hasNode(neighbour):
                 to_explore.append(neighbour)
             else:
                 to_exploit.append(neighbour)

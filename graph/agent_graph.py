@@ -47,15 +47,16 @@ class AgentGraph():
                 self.semantic_graph.create_node(achieved_goal)
                 self.semantic_graph.create_node(intermediate_achieved_goal)
 
-                if self.semantic_graph.getNodeId(goal) is not None:
-                    self.update_or_create_edge(start_config, goal, success)
-                if (achieved_goal != goal and start_config != achieved_goal
-                        and not self.semantic_graph.hasEdge(start_config, achieved_goal)):
-                    self.semantic_graph.create_edge_stats((start_config, achieved_goal), 1.)
+                # Edges are not needed to build a model of the agent's knowledge
+                # if self.semantic_graph.getNodeId(goal) is not None:
+                #     self.update_or_create_edge(start_config, goal, success)
+                # if (achieved_goal != goal and start_config != achieved_goal
+                #         and not self.semantic_graph.hasEdge(start_config, achieved_goal)):
+                #     self.semantic_graph.create_edge_stats((start_config, achieved_goal), 1.)
                 
-                if (intermediate_achieved_goal != goal and intermediate_achieved_goal != achieved_goal
-                        and not self.semantic_graph.hasEdge(intermediate_achieved_goal, achieved_goal)):
-                    self.semantic_graph.create_edge_stats((intermediate_achieved_goal, achieved_goal), 1.)
+                # if (intermediate_achieved_goal != goal and intermediate_achieved_goal != achieved_goal
+                #         and not self.semantic_graph.hasEdge(intermediate_achieved_goal, achieved_goal)):
+                #     self.semantic_graph.create_edge_stats((intermediate_achieved_goal, achieved_goal), 1.)
 
         # update frontier :
         self.semantic_graph.update()
