@@ -2,20 +2,15 @@ import torch
 import numpy as np
 from mpi_utils.mpi_utils import sync_networks
 from rl_modules.replay_buffer import ReplayBuffer
-from rl_modules.networks import QNetworkFlat, GaussianPolicyFlat
 from mpi_utils.normalizer import normalizer
 from her_modules.her import her_sampler
-from updates import update_flat, update_gnns
+from updates import update_gnns
+from utils import hard_update
 
 
 """
 SAC with HER (MPI-version)
 """
-
-def hard_update(target, source):
-    for target_param, param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_(param.data)
-
 
 class RLAgent:
     def __init__(self, args, compute_rew, goal_sampler):
@@ -104,6 +99,7 @@ class RLAgent:
             )
 
     def act(self, obs, ag, g, no_noise):
+        """ Use the policy model to perform a forward pass and sample action """
         with torch.no_grad():
             # normalize policy inputs
             obs_norm = self.o_norm.normalize(obs)
@@ -130,36 +126,18 @@ class RLAgent:
         else:
             self.social_buffer.store_episode(episode_batch=episodes)
 
-    # pre_process the inputs
-    def _preproc_inputs(self, obs, ag, g):
-        obs_norm = self.o_norm.normalize(obs)
-        delta_g = g - ag
-        # concatenate the stuffs
-        inputs = np.concatenate([obs_norm, delta_g])
-        inputs = torch.tensor(inputs, dtype=torch.float32).unsqueeze(0)
-        if self.args.cuda:
-            inputs = inputs.cuda()
-        return inputs
-
     def train(self):
-        # train the network
+        """ Train the network """
         self.total_iter += 1
         self._update_network()
 
         # soft update
         if self.total_iter % self.freq_target_update == 0:
             self._soft_update_target_network(self.model.critic_target, self.model.critic)
-                
 
-    def _select_actions(self, state, no_noise=False):
-        if not no_noise:
-            action, _, _ = self.actor_network.sample(state)
-        else:
-            _, _, action = self.actor_network.sample(state)
-        return action.detach().cpu().numpy()[0]
-
-    # update the normalizer
     def _update_normalizer(self, episode):
+        """ Update the normalizer
+        Input: Most recent episode """
         mb_obs = episode['obs']
         mb_ag = episode['ag']
         mb_g = episode['g']
@@ -187,17 +165,18 @@ class RLAgent:
         self.o_norm.recompute_stats()
 
     def _preproc_og(self, o, g):
+        """ Preprocesses observations and goals to avoid collapse """
         o = np.clip(o, -self.args.clip_obs, self.args.clip_obs)
         g = np.clip(g, -self.args.clip_obs, self.args.clip_obs)
         return o, g
 
-    # soft update
     def _soft_update_target_network(self, target, source):
+        """ Perform soft update using target networks and polyak hyparameter """
         for target_param, param in zip(target.parameters(), source.parameters()):
             target_param.data.copy_((1 - self.args.polyak) * param.data + self.args.polyak * target_param.data)
 
-    # update the network
     def _update_network(self):
+        """ Update the considered networks """
         # sample from buffer, this is done with LP is multi-head is true
         if np.random.uniform() < self.goal_sampler.query_proba and self.social_buffer.current_size > 0:
             transitions = self.social_buffer.sample(self.args.batch_size)
@@ -231,27 +210,14 @@ class RLAgent:
                     self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
                     final_rewards, self.args)
 
-    def get_goal_values(self, goals):
-        g_tensor = torch.tensor(goals, dtype=torch.float32)
-        if self.args.cuda:
-            g_tensor = g_tensor.cuda()
-        
-        with torch.no_grad():
-            self.model.value_forward_pass(g_tensor)
-        if self.args.cuda:
-            values = self.model.value.cpu().numpy()
-        else:
-            values = self.model.value.numpy()
-        
-        return values.squeeze()
-
     def save(self, model_path, epoch):
+        """ Save model """
         torch.save([self.o_norm.mean, self.o_norm.std,
                     self.model.actor.state_dict(), self.model.critic.state_dict(), self.model.value_network.state_dict()],
                     model_path + '/model_{}.pt'.format(epoch))
 
     def load(self, model_path, args):
-
+        """ Load model """
         o_mean, o_std, actor, critic, value_network = torch.load(model_path, map_location=lambda storage, loc: storage)
         self.model.actor.load_state_dict(actor)
         self.model.critic.load_state_dict(critic)

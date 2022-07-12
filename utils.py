@@ -16,6 +16,11 @@ def get_env_params(env):
               'action': env.action_space.shape[0], 'action_max': env.action_space.high[0],
               'max_timesteps': env._max_episode_steps}
     return params
+
+def hard_update(target, source):
+    """ Perform hard update, used to copy critic networks in target network during the initialization of the latter """
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(param.data)
         
 def init_storage(args):
     if not os.path.exists(args.save_dir):
