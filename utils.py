@@ -21,6 +21,18 @@ def hard_update(target, source):
     """ Perform hard update, used to copy critic networks in target network during the initialization of the latter """
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(param.data)
+
+def merge_mini_episodes_and_relabel(generated_episodes):
+        """ Given a list of mini episodes, merge them into a single one a relabel according to final goal """
+        # Concatenate mini-episodes and perform data augmentation
+        updated_episodes = []
+        for episode in generated_episodes:
+            merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items()}
+            # Relabel mini episodes according to final goal
+            merged_mini_episodes['g'][:] = merged_mini_episodes['g'][-1]
+            updated_episodes.append(merged_mini_episodes)
+        
+        return updated_episodes
         
 def init_storage(args):
     if not os.path.exists(args.save_dir):

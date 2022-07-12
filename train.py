@@ -79,7 +79,7 @@ def launch(args):
             # Environment interactions
             t_i = time.time()
             episodes, episodes_type = rollout_worker.train_rollout(agent_network= agent_network,
-                                                                   t=epoch,
+                                                                   epoch=epoch,
                                                                    time_dict=time_dict)
             time_dict['rollout'] += time.time() - t_i
 
@@ -109,7 +109,12 @@ def launch(args):
             for _ in range(args.n_batches):
                 policy.train()
             time_dict['policy_train'] += time.time() - t_i
+
             episode_count += args.num_rollouts_per_mpi * args.num_workers
+
+            # Update query proba based on frequency 
+            if episode_count // args.num_workers % args.query_proba_update_freq == 0:
+                goal_sampler.update_query_proba()
 
         time_dict['epoch'] += time.time() -t_init
         time_dict['total'] = time.time() - t_total_init

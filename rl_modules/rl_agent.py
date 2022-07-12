@@ -121,7 +121,7 @@ class RLAgent:
     
     def store(self, episodes, episodes_type):
         """ Store episodes in the corresponding buffer according to type (either social or individual) """
-        if episodes_type == 'individual':
+        if episodes_type == 'autotelic':
             self.buffer.store_episode(episode_batch=episodes)
         else:
             self.social_buffer.store_episode(episode_batch=episodes)

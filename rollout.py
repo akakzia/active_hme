@@ -2,7 +2,7 @@ import random
 import numpy as np
 from mpi4py import MPI
 from graph.agent_graph import AgentGraph
-from utils import apply_on_table_config
+from utils import apply_on_table_config, merge_mini_episodes_and_relabel
 import time
 
 def is_success(ag, g):
@@ -361,52 +361,43 @@ class HMERolloutWorker(RolloutWorker):
         # Check the list of internalized pairs
         # If list is not empty, than rehearse social interventions
         # Else, ask social partner
-        if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0 and self.attention_to_internalized_pairs:
-            # internalize SP pairs
-            generated_episodes = self.internalize_social_episodes(time_dict)
-        else:
-            # SP intervenes
-            generated_episodes = self.perform_social_episodes(agent_network, time_dict)
+        # if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0 and self.attention_to_internalized_pairs:
+        #     # internalize SP pairs
+        #     generated_episodes = self.internalize_social_episodes(time_dict)
+        # else:
+        #     # SP intervenes
+        generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
-        # Concatenate mini-episodes and perform data augmentation
-        updated_episodes = []
-        for episode in generated_episodes:
-            merged_mini_episodes = {k: np.concatenate([v[:100], episode[1][k]]) for k, v in episode[0].items()}
-            if self.args.data_augmentation:
-                # Relabel mini episodes according to final goal
-                merged_mini_episodes['g'][:] = merged_mini_episodes['g'][-1]
-            updated_episodes.append(merged_mini_episodes)
-        
-        all_episodes = updated_episodes
+        all_episodes = merge_mini_episodes_and_relabel(generated_episodes)
         return all_episodes
-    
+
     def launch_autotelic_phase(self, time_dict):
         """ Launch the autotelic episodes phase
         First sample goals. Than, compute the values of the goals. If value less than a threshold, than perform planning by 
         rehearsing the frontier/beyond procedure """
-        if np.random.uniform() < self.autotelic_planning_proba and len(self.beyond_list) > 0:
-            t_i = time.time()
-            norm_goals = self.goal_sampler.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond_list))
-            # Take indexes of goals with least value
-            ind = np.argsort(norm_goals)[:self.args.num_rollouts_per_mpi]
-            if len(ind) == 1:
-                ind = np.repeat(ind, repeats=self.args.num_rollouts_per_mpi, axis=0)
-            goals = np.array([self.beyond_list[i] for i in ind])
-            time_dict['goal_sampler'] += time.time() - t_i
-            # generate intermediate goals 
-            intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
-            all_episodes = self.autotelic_planning(intermediate_goals, goals)
-        else:
-            # Perform uniform autotelic episodes
-            t_i = time.time()
-            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
-            time_dict['goal_sampler'] += time.time() - t_i
-            all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
-                                                    true_eval=False,  # these are not offline evaluation episodes
-                                                )
+        # if np.random.uniform() < self.autotelic_planning_proba and len(self.beyond_list) > 0:
+        #     t_i = time.time()
+        #     norm_goals = self.goal_sampler.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond_list))
+        #     # Take indexes of goals with least value
+        #     ind = np.argsort(norm_goals)[:self.args.num_rollouts_per_mpi]
+        #     if len(ind) == 1:
+        #         ind = np.repeat(ind, repeats=self.args.num_rollouts_per_mpi, axis=0)
+        #     goals = np.array([self.beyond_list[i] for i in ind])
+        #     time_dict['goal_sampler'] += time.time() - t_i
+        #     # generate intermediate goals 
+        #     intermediate_goals = self.goal_sampler.generate_intermediate_goals(goals)
+        #     all_episodes = self.autotelic_planning(intermediate_goals, goals)
+        # else:
+        # Perform uniform autotelic episodes
+        t_i = time.time()
+        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+        time_dict['goal_sampler'] += time.time() - t_i
+        all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                             true_eval=False,  # these are not offline evaluation episodes
+                                            )
         return all_episodes
 
-    def sync(self, query_proba):
+    def sync(self):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
         if self.args.beta > 0:
@@ -423,18 +414,20 @@ class HMERolloutWorker(RolloutWorker):
         
         if MPI.COMM_WORLD.Get_rank() == 0:
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
-            self.goal_sampler.stats['query_proba'].append(query_proba)
+            self.goal_sampler.stats['query_proba'].append(self.goal_sampler.query_proba)
 
 
-    def train_rollout(self, agent_network, t, time_dict=None):
-        # Anneal query proba if no stepping stones are available
-        query_proba = self.goal_sampler.query_proba if len(agent_network.teacher.agent_stepping_stones) > 0 else 0.
-        if t > 5 and np.random.uniform() < query_proba:
+    def train_rollout(self, agent_network, epoch, time_dict=None):
+        """ Run one rollout pass of self.args.num_rollouts_per_mpi episodes """
+
+        # First, select episode type based on 1) the query proba and 2) whether or not there are remaining stepping stones to propose. 
+        episodes_type = 'social' if np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.agent_stepping_stones) > 0 else 'autotelic'
+        
+        if episodes_type == 'social' and epoch > self.args.n_freeplay_epochs: 
             all_episodes = self.launch_social_phase(agent_network, time_dict)
-            episodes_type = 'social'
         else:
             all_episodes = self.launch_autotelic_phase(time_dict)
-            episodes_type = 'individual'
+        
+        self.sync()
 
-        self.sync(query_proba)
         return all_episodes, episodes_type

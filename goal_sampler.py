@@ -66,7 +66,8 @@ class GoalSampler:
             goals = np.array(goals)
         else:
             if len(self.discovered_goals) == 0:
-                goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
+                # goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
+                goals = - np.ones((n_goals, self.goal_dim))
             else:
                 # sample uniformly from discovered goals
                 goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
@@ -96,23 +97,13 @@ class GoalSampler:
         # Update the goal memory
         episodes = self.update_goal_memory(episodes)
 
+        # update goal estimations
         if self.rank == 0.:
             # Compute goal values
-            norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals))
+            norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.discovered_goals)).reshape(len(self.discovered_goals), -1)
             self.values_goals.append(norm_values)
-
-            # Compute Query Probabilities
-            if len(self.values_goals) > self.min_queue_length:
-                delta_value_goals = abs(self.values_goals[0] - self.values_goals[-1][:len(self.values_goals[0])])
-                if self.progress_function == 'mean':
-                    progress = np.mean(delta_value_goals) 
-                elif self.progress_function == 'max':
-                    progress = np.max(delta_value_goals)
-                
-                self.query_proba = np.exp(- self.beta * progress)
-            
+        
         self.sync_queries()
-
         return episodes
 
     def update_goal_memory(self, episodes):
@@ -162,16 +153,16 @@ class GoalSampler:
                     self.nb_discovered_goals += 1
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
                 # second condition to avoid adding unreasonable goals
-                if self.attention_to_internalized_pairs and str(goal) not in self.discovered_goals_str and self.nb_discovered_goals > 0: 
-                    self.discovered_goals.append(goal.copy())
-                    self.discovered_goals_str.append(str(goal))
-                    self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
+                # if self.attention_to_internalized_pairs and str(goal) not in self.discovered_goals_str and self.nb_discovered_goals > 0: 
+                #     self.discovered_goals.append(goal.copy())
+                #     self.discovered_goals_str.append(str(goal))
+                #     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
 
-                    # Check to which stack class corresponds the discovered goal
-                    above_predicates = last_ag[10:30]
+                #     # Check to which stack class corresponds the discovered goal
+                #     above_predicates = last_ag[10:30]
 
-                    # Increment number of discovered goals (to increment the id !)
-                    self.nb_discovered_goals += 1
+                #     # Increment number of discovered goals (to increment the id !)
+                #     self.nb_discovered_goals += 1
 
 
         for e in episodes:
@@ -188,11 +179,23 @@ class GoalSampler:
         self.discovered_goals_oracle_ids = MPI.COMM_WORLD.bcast(self.discovered_goals_oracle_ids, root=0)
         self.nb_discovered_goals = MPI.COMM_WORLD.bcast(self.nb_discovered_goals, root=0)
     
+    def update_query_proba(self):
+        # Compute Query Probabilities
+        if len(self.values_goals) > self.min_queue_length:
+            delta_value_goals = abs(self.values_goals[0] - self.values_goals[-1][:len(self.values_goals[0])])
+            if self.progress_function == 'mean':
+                progress = np.mean(delta_value_goals) 
+            elif self.progress_function == 'max':
+                progress = np.max(delta_value_goals)
+            
+            # self.query_proba = np.exp(- self.beta * progress)
+            self.query_proba = progress
+
     def sync_queries(self):
         """ Synchronize the query's attributes between all workers """
         self.values_goals = MPI.COMM_WORLD.bcast(self.values_goals, root=0)
         self.values_goals = self.values_goals[-self.max_queue_length:]
-        self.query_proba = MPI.COMM_WORLD.bcast(self.query_proba, root=0)
+        # self.query_proba = MPI.COMM_WORLD.bcast(self.query_proba, root=0)
 
     def init_stats(self):
         self.stats = dict()
