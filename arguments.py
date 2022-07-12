@@ -75,6 +75,10 @@ def get_args():
 
     parser.add_argument('--attention-to-internalized-pairs', type=bool, default=False, help='test')
 
+    parser.add_argument('--n-freeplay-epochs', type=int, default=5, help='test')
+
+    parser.add_argument('--query-proba-update-freq', type=int, default=30, help='In how many episodes update the query proba')
+
     args = parser.parse_args()
 
     return args
