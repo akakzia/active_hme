@@ -188,8 +188,7 @@ class GoalSampler:
             elif self.progress_function == 'max':
                 progress = np.max(delta_value_goals)
             
-            # self.query_proba = np.exp(- self.beta * progress)
-            self.query_proba = progress
+            self.query_proba = np.exp(- self.beta * progress)
 
     def sync_queries(self):
         """ Synchronize the query's attributes between all workers """
