@@ -71,11 +71,11 @@ def get_args():
     parser.add_argument('--apply-her-on-social', type=bool, default=True, help='test')
 
     parser.add_argument('--internalization-strategy', type=int, default=0, help='0: None; 1, 2, 3, 4 to be described later')
-    parser.add_argument('--internalization-threshold', type=float, default=0.5, help='test')
+    parser.add_argument('--internalization-threshold', type=float, default=0.4, help='test')
 
-    parser.add_argument('--n-freeplay-epochs', type=int, default=5, help='test')
+    parser.add_argument('--n-freeplay-epochs', type=int, default=10, help='test')
 
-    parser.add_argument('--query-proba-update-freq', type=int, default=30, help='In how many episodes update the query proba')
+    parser.add_argument('--query-proba-update-freq', type=int, default=300, help='In how many episodes update the query proba')
 
     args = parser.parse_args()
 
