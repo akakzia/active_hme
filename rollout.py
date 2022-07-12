@@ -76,6 +76,10 @@ class RolloutWorker:
                 ag = ag_new
                 ag_bin = ag_new_bin
 
+                if true_eval and r == self.args.n_blocks:
+                    # When performing offline evaluations, stop episode once the goal is reached
+                    break
+
             ep_obs.append(obs.copy())
             ep_ag.append(ag.copy())
             ep_ag_bin.append(ag_bin.copy())
