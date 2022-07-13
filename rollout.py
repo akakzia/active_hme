@@ -373,8 +373,8 @@ class HMERolloutWorker(RolloutWorker):
         # else:
         
         # Decide whether to do internalization
-        do_internalization, goal_ids = self.goal_sampler.do_internalization()
-        if do_internalization and self.internalization_strategy > 1:
+        do_internalization, goal_ids, proba_query_intern= self.goal_sampler.do_internalization()
+        if do_internalization:
             # perform internalization
             if self.internalization_strategy == 2:
                 self.internalized_ss, self.internalized_beyond = self.stepping_stones_beyond_pairs_list[goal_ids[0]]
@@ -394,9 +394,9 @@ class HMERolloutWorker(RolloutWorker):
             all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                                 true_eval=False,  # these are not offline evaluation episodes
                                                 )
-        return all_episodes
+        return all_episodes, proba_query_intern
 
-    def sync(self):
+    def sync(self, p_query_intern):
         """ Synchronize the list of pairs (stepping stone, Beyond) between all workers"""
         # Transformed to set to avoid duplicates
         if self.args.beta > 0:
@@ -417,6 +417,7 @@ class HMERolloutWorker(RolloutWorker):
         if MPI.COMM_WORLD.Get_rank() == 0:
             self.goal_sampler.stats['nb_internalized_pairs'].append(self.nb_internalized_pairs)
             self.goal_sampler.stats['query_proba'].append(self.goal_sampler.query_proba)
+            self.goal_sampler.stats['query_proba_intern'].append(p_query_intern)
 
 
     def train_rollout(self, agent_network, epoch, time_dict=None):
@@ -428,8 +429,8 @@ class HMERolloutWorker(RolloutWorker):
         if episodes_type == 'social' and epoch > self.args.n_freeplay_epochs: 
             all_episodes = self.launch_social_phase(agent_network, time_dict)
         else:
-            all_episodes = self.launch_autotelic_phase(time_dict)
+            all_episodes, proba_query_intern = self.launch_autotelic_phase(time_dict)
         
-        self.sync()
+        self.sync(proba_query_intern)
 
         return all_episodes, episodes_type

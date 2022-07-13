@@ -189,12 +189,22 @@ class GoalSampler:
         """ Decide whether to do internalization or not
         Check the list of beyond goals, evaluate them
         Return True if at least one value is below a threshold """
-        if len(self.beyond) == 0:
-            return False, None
-        norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond))
-        do_internalization = (norm_values < self.internalization_threshold).any()
+        if len(self.beyond) == 0 or self.internalization_strategy < 2:
+            return False, None, 0.
+        if self.internalization_strategy == 3:
+            norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond))
+        elif self.internalization_strategy == 2:
+            ag = np.array([i for (i, _) in self.ss_b_pairs])
+            g = np.array([f for (_, f) in self.ss_b_pairs])
+            norm_values = self.goal_evaluator.estimate_goal_value(goals=g, ag=ag)
+        else:
+            raise NotImplementedError
+        # do_internalization = (norm_values < self.internalization_threshold).any()
+        least_value = norm_values[np.argsort(norm_values)[0]]
+        proba_intern_query = np.exp(- 3 * least_value)
+        do_internalization = np.random.uniform() < proba_intern_query
         ind = np.random.choice(np.argsort(norm_values)[:5], size=2)
-        return do_internalization, ind
+        return do_internalization, ind, proba_intern_query
 
 
     def generate_intermediate_goals(self, goals):
