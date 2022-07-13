@@ -386,6 +386,15 @@ class HMERolloutWorker(RolloutWorker):
                 all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                                 true_eval=False,  # these are not offline evaluation episodes
                                                 )
+            elif self.internalization_strategy == 4:
+                beyond_goal = np.array(self.beyond_list)[goal_ids[0]]
+                # Treat the self generated frontier as an internalized ss for implementation purposes
+                intermediate_goal = self.goal_sampler.generate_intermediate_goals(goals)
+                self.internalized_beyond = tuple(beyond_goal)
+                self.internalized_ss = tuple(intermediate_goal)
+                generated_episodes = self.internalize_social_episodes(time_dict)
+
+                all_episodes = merge_mini_episodes_and_relabel(generated_episodes)
         else:
             # Perform uniform autotelic episodes
             t_i = time.time()

@@ -191,7 +191,7 @@ class GoalSampler:
         Return True if at least one value is below a threshold """
         if len(self.beyond) == 0 or self.internalization_strategy < 2:
             return False, None, 0.
-        if self.internalization_strategy == 3:
+        if self.internalization_strategy == 3 or self.internalization_strategy == 4:
             norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond))
         elif self.internalization_strategy == 2:
             ag = np.array([i for (i, _) in self.ss_b_pairs])
@@ -211,19 +211,23 @@ class GoalSampler:
         return do_internalization, ind, proba_intern_query
 
 
-    def generate_intermediate_goals(self, goals):
-        """ Given an array of goals, uses goal evaluator to generate intermediate goals that maximize the value """
-        res = []
-        for eval_goal in goals:
-            repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
-            norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
-            ind = np.argsort(norm_goals)[-2:]
-            adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
-            res.append(adjacent_goal)
+    def generate_intermediate_goal(self, goal):
+        """ Given a goal, uses goal evaluator to generate intermediate goal that maximize the value """
+        # res = []
+        # for eval_goal in goals:
+        #     repeat_goal = np.repeat(np.expand_dims(eval_goal, axis=0), repeats=len(self.discovered_goals), axis=0)
+        #     norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
+        #     ind = np.argsort(norm_goals)[-2:]
+        #     adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(eval_goal) else self.discovered_goals[ind[1]]
+        #     res.append(adjacent_goal)
         
-        res = np.array(res)
+        # res = np.array(res)
+        repeat_goal = np.repeat(np.expand_dims(goal, axis=0), repeats=len(self.discovered_goals), axis=0)
+        norm_goals = self.goal_evaluator.estimate_goal_value(goals=repeat_goal, ag=self.discovered_goals)
+        ind = np.argsort(norm_goals)[-2:]
+        adjacent_goal = self.discovered_goals[ind[0]] if str(self.discovered_goals[ind[0]]) != str(goal) else self.discovered_goals[ind[1]]
 
-        return res
+        return adjacent_goal
 
     def init_stats(self):
         self.stats = dict()
