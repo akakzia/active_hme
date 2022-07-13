@@ -200,7 +200,11 @@ class GoalSampler:
         else:
             raise NotImplementedError
         # do_internalization = (norm_values < self.internalization_threshold).any()
-        least_value = norm_values[np.argsort(norm_values)[0]]
+        try:
+            least_value = norm_values[np.argsort(norm_values)[0]]
+        except IndexError:
+            # avoid the case where only one goal is internalized and norm_values is scalar
+            least_value = norm_values
         proba_intern_query = np.exp(- 3 * least_value)
         do_internalization = np.random.uniform() < proba_intern_query
         ind = np.random.choice(np.argsort(norm_values)[:5], size=2)
