@@ -389,7 +389,7 @@ class HMERolloutWorker(RolloutWorker):
             elif self.internalization_strategy == 4:
                 beyond_goal = np.array(self.beyond_list)[goal_ids[0]]
                 # Treat the self generated frontier as an internalized ss for implementation purposes
-                intermediate_goal = self.goal_sampler.generate_intermediate_goals(goals)
+                intermediate_goal = self.goal_sampler.generate_intermediate_goal(beyond_goal)
                 self.internalized_beyond = tuple(beyond_goal)
                 self.internalized_ss = tuple(intermediate_goal)
                 generated_episodes = self.internalize_social_episodes(time_dict)
