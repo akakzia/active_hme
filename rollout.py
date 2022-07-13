@@ -426,6 +426,8 @@ class HMERolloutWorker(RolloutWorker):
         # First, select episode type based on 1) the query proba and 2) whether or not there are remaining stepping stones to propose. 
         episodes_type = 'social' if np.random.uniform() < self.goal_sampler.query_proba and len(agent_network.teacher.agent_stepping_stones) > 0 else 'autotelic'
         
+        proba_query_intern = 0.
+
         if episodes_type == 'social' and epoch > self.args.n_freeplay_epochs: 
             all_episodes = self.launch_social_phase(agent_network, time_dict)
         else:
