@@ -246,6 +246,7 @@ class GoalSampler:
         self.stats['proposed_ss'] = []
         self.stats['proposed_beyond'] = []
         self.stats['query_proba'] = []
+        self.stats['query_proba_intern'] = []
         keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:
