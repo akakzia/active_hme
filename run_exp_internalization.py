@@ -13,7 +13,7 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-i_strategies = [0, 1, 2, 3]
+i_strategies = [1, 2, 3]
 nb_seeds = 3
 
 for i in range(nb_seeds):
@@ -23,10 +23,10 @@ for i in range(nb_seeds):
         with open(job_file, 'w') as fh:
             fh.writelines("#!/bin/bash\n")
             fh.writelines("#SBATCH --account=kcr@v100\n")
-            fh.writelines(f"#SBATCH --job-name=internalization_strategy={s}\n")
+            fh.writelines(f"#SBATCH --job-name=re_internalization_strategy={s}\n")
             fh.writelines("#SBATCH --qos=qos_gpu-t3\n")
-            fh.writelines(f"#SBATCH --output=internalization_strategy={s}_%_%j.out\n")
-            fh.writelines(f"#SBATCH --error=internalization_strategy={s}_%_%j.out\n")
+            fh.writelines(f"#SBATCH --output=re_internalization_strategy={s}_%_%j.out\n")
+            fh.writelines(f"#SBATCH --error=re_internalization_strategy={s}_%_%j.out\n")
             fh.writelines("#SBATCH --time=19:59:59\n")
             fh.writelines("#SBATCH --ntasks=24\n")
             fh.writelines("#SBATCH --ntasks-per-node=1\n")
@@ -45,7 +45,7 @@ for i in range(nb_seeds):
             fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
             fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-            fh.writelines(f"srun python -u -B train.py --internalization-strategy {s} --save-dir 'internalization_strategy={s}/' 2>&1 ")
+            fh.writelines(f"srun python -u -B train.py --internalization-strategy {s} --save-dir 're_internalization_strategy={s}/' 2>&1 ")
 
         os.system("sbatch %s" % job_file)
         sleep(1)
