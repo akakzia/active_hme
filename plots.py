@@ -21,12 +21,12 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
           [0.466, 0.674, 0.8], [0.929, 0.04, 0.125],
           [0.3010, 0.245, 0.33], [0.635, 0.078, 0.184], [0.35, 0.78, 0.504]]
 cmap = plt.get_cmap('tab20b')
-colors = np.array(cmap.colors)[[0, 17, 2, 16, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
-folder = 'exp_01'
+colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
+folder = 'internalization_study'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/'
-TO_PLOT = ['proposed_ss']
+TO_PLOT = ['agent_nodes']
 
 NB_CLASSES = 11 # 12 for 5 blocks
 
@@ -40,11 +40,11 @@ MARKERSIZE = 15 # 15 for per class
 ALPHA = 0.3
 ALPHA_TEST = 0.05
 MARKERS = ['o', 'v', 's', 'P', 'D', 'X', "*", 'v', 's', 'p', 'P', '1']
-FREQ = 10
+FREQ = 5
 NB_BUCKETS = 10
 NB_EPS_PER_EPOCH = 2400
 NB_VALID_GOALS = 35
-LAST_EP = 160
+LAST_EP = 125
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
 line, err_min, err_plus = get_stat_func(line=LINE, err=ERR)
 COMPRESSOR = CompressPDF(4)
@@ -78,7 +78,7 @@ def setup_figure(xlabel=None, ylabel=None, xlim=None, ylim=None):
 
 def setup_n_figs(n, m, xlabels=None, ylabels=None, xlims=None, ylims=None):
     if n == 1:
-        fig, axs = plt.subplots(n, m, figsize=(48, 12), frameon=False)
+        fig, axs = plt.subplots(n, m, figsize=(64, 12), frameon=False)
     else:
         fig, axs = plt.subplots(n, m, figsize=(m * 18, n * 12), frameon=False)
     axs = axs.ravel()
@@ -201,19 +201,18 @@ def plot_sr_av(max_len, experiment_path, folder):
     save_fig(path=SAVE_PATH + folder + '_sr.pdf', artists=artists)
 
 
-def plot_sr_av_all(max_len, experiment_path):
+def plot_sr_av_all(max_len, experiment_path, titles, folders):
+    m = len(folders)
     fig, artists, ax = setup_n_figs(n=1,
-                                   m=3, 
+                                   m=m, 
                                 #    xlabels=[None, None, 'Episodes (x$10^3$)', 'Episodes (x$10^3$)'],
                                 #    ylabels= ['Success Rate', None] * 2,
-                                   xlabels = ['Episodes (x$10^3$)'] * 3,
-                                   ylabels = ['Success Rate', None, None],
-                                   xlims = [[-1, LIM] for _ in range(4)],
-                                   ylims= [[-0.02, 1.03] for _ in range(4)]
+                                   xlabels = ['Episodes (x$10^3$)'] * m,
+                                   ylabels = ['Success Rate'] + [None] * (m-1),
+                                   xlims = [[-1, LIM] for _ in range(m)],
+                                   ylims= [[-0.02, 1.03] for _ in range(m)]
         )
-    # titles = ['Continuous-GN', 'Continuous-IN', 'Continuous-RN', 'Continuous-DS', 'Continuous-Flat']
-    titles = ['Continuous-GN', 'Continuous-IN', 'Continuous-DS']
-    for k, folder in enumerate(['continuous_full_gn', 'continuous_interaction_network_2', 'continuous_deep_sets']):
+    for k, folder in enumerate(folders):
         condition_path = experiment_path + folder + '/'
         list_runs = sorted(os.listdir(condition_path))
         global_sr = np.zeros([len(list_runs), max_len])
@@ -230,9 +229,9 @@ def plot_sr_av_all(max_len, experiment_path):
             T = len(data_run['Eval_SR_1'][:LAST_EP + 1])
             SR = np.zeros([NB_CLASSES, T])
             for t in range(T):
-                for i in range(NB_CLASSES):
-                    SR[i, t] = data_run['Eval_SR_{}'.format(i+1)][t]
-            all_sr = np.mean([data_run['Eval_SR_{}'.format(i+1)] for i in range(NB_CLASSES)], axis=0)
+                for i, j in enumerate([0, 1, 3, 4, 5, 6, 7, 8, 9, 10]):
+                    SR[i, t] = data_run['Eval_SR_{}'.format(j+1)][t]
+            all_sr = np.mean([data_run['Eval_SR_{}'.format(i+1)] for i in [0, 1, 3, 4, 5, 6, 7, 8, 9, 10]], axis=0)
 
             sr_buckets = []
             for i in range(SR.shape[0]):
@@ -248,7 +247,7 @@ def plot_sr_av_all(max_len, experiment_path):
         av = line(global_sr)
         for i in range(NB_CLASSES):
             ax[k].plot(x_eps, sr_per_cond_stats[i, x, 0], color=colors[i], marker=MARKERS[i], markersize=MARKERSIZE, linewidth=LINEWIDTH)
-        ax[k].plot(x_eps, av[x], color=[0.3]*3, linestyle='--', linewidth=LINEWIDTH // 2)
+        # ax[k].plot(x_eps, av[x], color=[0.3]*3, linestyle='--', linewidth=LINEWIDTH // 2)
 
         for i in range(NB_CLASSES):
             ax[k].fill_between(x_eps, sr_per_cond_stats[i, x, 1], sr_per_cond_stats[i, x, 2], color=colors[i], alpha=ALPHA)
@@ -257,14 +256,14 @@ def plot_sr_av_all(max_len, experiment_path):
         ax[k].grid()
         ax[k].set_title(titles[k], fontname='monospace', fontweight='bold')
         ax[k].set_facecolor('whitesmoke')
-    leg = fig.legend(#['$C_1$', '$C_2$', '$C_3$', '$S_2$', '$S_3$', '$S_2$ & $S_2$', '$S_2$ & $S_3$', '$P_3$', '$P_3$ & $S_2$', '$S_4$', '$S_5$', 'Global'],
-                    ['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
+    leg = fig.legend(['$C_1$', '$C_2$', '$S_2$', '$S_3$', '$S_2$ & $S_2$', '$S_2$ & $S_3$', '$P_3$', '$P_3$ & $S_2$', '$S_4$', '$S_5$'],
+                    #['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
                     loc='upper center',
                     bbox_to_anchor=(0.525, 1.22),
-                    ncol=6,
+                    ncol=10,
                     fancybox=True,
                     shadow=True,
-                    prop={'size': 65, 'weight': 'normal'},
+                    prop={'size': 75, 'weight': 'normal'},
                     markerscale=1)
     artists += (leg,)
     save_fig(path=SAVE_PATH + 'per_class.pdf', artists=artists)
@@ -312,7 +311,7 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                      ncol=7,
                      fancybox=True,
                      shadow=True,
-                     prop={'size': 40, 'weight': 'bold'},
+                     prop={'size': 60, 'weight': 'bold'},
                      markerscale=1,
                      )
     for l in leg.get_lines():
@@ -373,7 +372,7 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
     x = np.arange(0, LAST_EP + 1, FREQ)
     artists, ax = setup_figure(xlabel='Episodes (x$10^3$)',
                                # xlabel='Epochs',
-                               ylabel='Success Rate',
+                               ylabel='# Discovered Goals',
                                xlim=[-1, LIM],
                                ylim=[-0.02, max_value + 0.02])
 
@@ -388,7 +387,7 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
                      ncol=7,
                      fancybox=True,
                      shadow=True,
-                     prop={'size': 40, 'weight': 'bold'},
+                     prop={'size': 60, 'weight': 'bold'},
                      markerscale=1,
                      )
     for l in leg.get_lines():
@@ -396,8 +395,6 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
     artists += (leg,)
     for i in range(len(conditions)):
         plt.fill_between(x_eps, probas_per_cond_stats[i, x, 1], probas_per_cond_stats[i, x, 2], color=colors[i], alpha=ALPHA)
-
-    ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
     plt.grid()
     # ax.set_facecolor((244/255, 244/255, 244/255))
     save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
@@ -411,9 +408,13 @@ if __name__ == '__main__':
 
         max_len, max_seeds, min_len, min_seeds = check_length_and_seeds(experiment_path=experiment_path)
 
-        conditions = [f'exp_queries_q={q}_beta={b}' for q in [200] for b in [0, 20, 50, 100, 200, 300, 1000]]
-        labels = [f'β={b}' for q in [200] for b in [0, 20, 50, 100, 200, 300, 1000]]
-        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=100000.)
+        # conditions = [f'exp_queries_q={q}_beta={b}' for q in [200] for b in [0, 20, 50, 100, 200, 300, 1000]]
+        # labels = [f'β={b}' for q in [200] for b in [0, 20, 50, 100, 200, 300, 1000]]
+        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=100000.)
+
+        conditions = [f'internalization_strategy={s}' for s in [0, 1, 2, 3, 4]]
+        labels = [f'IN-{s}' for s in [0, 1, 2, 3, 4]]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # plot_sr_av(max_len, experiment_path, 'flat')
-        # plot_sr_av_all(max_len, experiment_path)
+        # plot_sr_av_all(max_len, experiment_path, titles=labels, folders=conditions)
+        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=8100.)
