@@ -47,6 +47,9 @@ class AgentGraph():
                 self.semantic_graph.create_node(achieved_goal)
                 self.semantic_graph.create_node(intermediate_achieved_goal)
 
+                if self.args.internalization_strategy > 0:
+                    self.semantic_graph.create_node(goal)
+
                 # Edges are not needed to build a model of the agent's knowledge
                 # if self.semantic_graph.getNodeId(goal) is not None:
                 #     self.update_or_create_edge(start_config, goal, success)
