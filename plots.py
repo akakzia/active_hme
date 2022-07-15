@@ -10,7 +10,7 @@ import json
 from scipy.stats import ttest_ind
 from utils import get_stat_func, CompressPDF
 
-font = {'size': 60}
+font = {'size': 80}
 matplotlib.rc('font', **font)
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -20,15 +20,19 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
           [0.494, 0.1844, 0.556],[0.3010, 0.745, 0.933], [137/255,145/255,145/255],
           [0.466, 0.674, 0.8], [0.929, 0.04, 0.125],
           [0.3010, 0.245, 0.33], [0.635, 0.078, 0.184], [0.35, 0.78, 0.504]]
-cmap = plt.get_cmap('tab20b')
-colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
-folder = 'internalization_study'
+cmap = plt.get_cmap('tab10')
+# colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
+colors = np.array(cmap.colors)
+folder = 'internalization_study_bis'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/'
-TO_PLOT = ['agent_nodes']
+TO_PLOT = ['nb_discovered']
 
-NB_CLASSES = 11 # 12 for 5 blocks
+metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
+                   'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
+                   'nb_internalized_pairs': '# Internalized goals', 'agent_nodes': '# Agent nodes'}
+NB_CLASSES = 10 # 12 for 5 blocks
 
 LINE = 'mean'
 ERR = 'std'
@@ -44,7 +48,7 @@ FREQ = 5
 NB_BUCKETS = 10
 NB_EPS_PER_EPOCH = 2400
 NB_VALID_GOALS = 35
-LAST_EP = 125
+LAST_EP = 130
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
 line, err_min, err_plus = get_stat_func(line=LINE, err=ERR)
 COMPRESSOR = CompressPDF(4)
@@ -62,7 +66,7 @@ def setup_figure(xlabel=None, ylabel=None, xlim=None, ylim=None):
     ax.spines['right'].set_linewidth(6)
     ax.spines['bottom'].set_linewidth(6)
     ax.spines['left'].set_linewidth(6)
-    ax.tick_params(width=10, direction='in', length=20, labelsize='40')
+    ax.tick_params(width=10, direction='in', length=20, labelsize='60')
     artists = ()
     if xlabel:
         xlab = plt.xlabel(xlabel)
@@ -259,7 +263,7 @@ def plot_sr_av_all(max_len, experiment_path, titles, folders):
     leg = fig.legend(['$C_1$', '$C_2$', '$S_2$', '$S_3$', '$S_2$ & $S_2$', '$S_2$ & $S_3$', '$P_3$', '$P_3$ & $S_2$', '$S_4$', '$S_5$'],
                     #['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
                     loc='upper center',
-                    bbox_to_anchor=(0.525, 1.22),
+                    bbox_to_anchor=(0.505, 1.22),
                     ncol=10,
                     fancybox=True,
                     shadow=True,
@@ -298,7 +302,7 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                                # xlabel='Epochs',
                                ylabel='Success Rate',
                                xlim=[-1, LIM],
-                               ylim=[-0.02, 1 + 0.02])
+                               ylim=[-0.02, 1 + 0.04 * len(labels)])
 
     for i in range(len(conditions)):
         plt.plot(x_eps, sr_per_cond_stats[i, x, 0], color=colors[i], marker=MARKERS[i], markersize=MARKERSIZE, linewidth=LINEWIDTH)
@@ -320,26 +324,26 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
     for i in range(len(conditions)):
         plt.fill_between(x_eps, sr_per_cond_stats[i, x, 1], sr_per_cond_stats[i, x, 2], color=colors[i], alpha=ALPHA)
     
-    # # compute p value wrt ref id
-    # p_vals = dict()
-    # for i_cond in range(len(conditions)):
-    #     if i_cond != ref_id:
-    #         p_vals[i_cond] = []
-    #         for i in x:
-    #             ref_inds = np.argwhere(~np.isnan(sr[:, ref_id, i])).flatten()
-    #             other_inds = np.argwhere(~np.isnan(sr[:, i_cond, i])).flatten()
-    #             if ref_inds.size > 1 and other_inds.size > 1:
-    #                 ref = sr[:, ref_id, i][ref_inds]
-    #                 other = sr[:, i_cond, i][other_inds]
-    #                 p_vals[i_cond].append(ttest_ind(ref, other, equal_var=False)[1])
-    #             else:
-    #                 p_vals[i_cond].append(1)
+    # compute p value wrt ref id
+    p_vals = dict()
+    for i_cond in range(len(conditions)):
+        if i_cond != ref_id:
+            p_vals[i_cond] = []
+            for i in x:
+                ref_inds = np.argwhere(~np.isnan(sr[:, ref_id, i])).flatten()
+                other_inds = np.argwhere(~np.isnan(sr[:, i_cond, i])).flatten()
+                if ref_inds.size > 1 and other_inds.size > 1:
+                    ref = sr[:, ref_id, i][ref_inds]
+                    other = sr[:, i_cond, i][other_inds]
+                    p_vals[i_cond].append(ttest_ind(ref, other, equal_var=False)[1])
+                else:
+                    p_vals[i_cond].append(1)
                     
-    # for i_cond in range(len(conditions)):
-    #     if i_cond != ref_id:
-    #         inds_sign = np.argwhere(np.array(p_vals[i_cond]) < ALPHA_TEST).flatten()
-    #         if inds_sign.size > 0:
-    #             plt.scatter(x=x_eps[inds_sign], y=np.ones([inds_sign.size]) - 0.04 + 0.05 * i_cond, marker='*', color=colors[i_cond], s=1300)
+    for i_cond in range(len(conditions)):
+        if i_cond != ref_id:
+            inds_sign = np.argwhere(np.array(p_vals[i_cond]) < ALPHA_TEST).flatten()
+            if inds_sign.size > 0:
+                plt.scatter(x=x_eps[inds_sign], y=np.ones([inds_sign.size]) - 0.04 + 0.05 * i_cond, marker='*', color=colors[i_cond], s=1300)
 
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
     plt.grid()
@@ -372,11 +376,14 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
     x = np.arange(0, LAST_EP + 1, FREQ)
     artists, ax = setup_figure(xlabel='Episodes (x$10^3$)',
                                # xlabel='Epochs',
-                               ylabel='# Discovered Goals',
+                               ylabel=metric_to_label[to_plot],
                                xlim=[-1, LIM],
                                ylim=[-0.02, max_value + 0.02])
 
     for i in range(len(conditions)):
+        print(labels[i])
+        print(f'{probas_per_cond_stats[i, -1, 0]}+={(probas_per_cond_stats[i, -1, 2] - probas_per_cond_stats[i, -1, 0])}')
+        print('===========')
         plt.plot(x_eps, probas_per_cond_stats[i, x, 0], color=colors[i], marker=MARKERS[i], markersize=MARKERSIZE, linewidth=LINEWIDTH)
 
     if labels is None:
@@ -412,9 +419,9 @@ if __name__ == '__main__':
         # labels = [f'β={b}' for q in [200] for b in [0, 20, 50, 100, 200, 300, 1000]]
         # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=100000.)
 
-        conditions = [f'internalization_strategy={s}' for s in [0, 1, 2, 3, 4]]
-        labels = [f'IN-{s}' for s in [0, 1, 2, 3, 4]]
+        conditions = [f'internalization_strategy={s}' for s in [4, 2, 3, 1, 0]]
+        labels = [f'IN-{s}' for s in [1, 2, 3, 4]] + ['w/o IN']
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # plot_sr_av(max_len, experiment_path, 'flat')
         # plot_sr_av_all(max_len, experiment_path, titles=labels, folders=conditions)
-        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=8100.)
+        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=50000)
