@@ -27,7 +27,8 @@ class GoalSampler:
         self.values_goals = []
 
         # Query arguments
-        self.query_proba = 0.
+        self.fixed_queries = args.fixed_queries
+        self.query_proba = args.fixed_query_proba if self.fixed_queries else 0.
         self.min_queue_length = args.min_queue_length 
         self.max_queue_length = args.max_queue_length
         self.beta = args.beta
@@ -165,14 +166,15 @@ class GoalSampler:
     
     def update_query_proba(self):
         # Compute Query Probabilities
-        if len(self.values_goals) > self.min_queue_length:
-            delta_value_goals = abs(self.values_goals[0] - self.values_goals[-1][:len(self.values_goals[0])])
-            if self.progress_function == 'mean':
-                progress = np.mean(delta_value_goals) 
-            elif self.progress_function == 'max':
-                progress = np.max(delta_value_goals)
-            
-            self.query_proba = np.exp(- self.beta * progress)
+        if not self.fixed_queries:
+            if len(self.values_goals) > self.min_queue_length:
+                delta_value_goals = abs(self.values_goals[0] - self.values_goals[-1][:len(self.values_goals[0])])
+                if self.progress_function == 'mean':
+                    progress = np.mean(delta_value_goals) 
+                elif self.progress_function == 'max':
+                    progress = np.max(delta_value_goals)
+                
+                self.query_proba = np.exp(- self.beta * progress)
 
     def sync_queries(self):
         """ Synchronize the query's attributes between all workers """
