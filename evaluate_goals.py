@@ -132,6 +132,11 @@ def evaluate_coverage(discovered_goals, assignement_goals, oracle_goals):
     return ratio_discovered_assignement, ratio_discovered_oracle, ratio_new_goals
 
 if __name__ == '__main__':
+    # Prevent hyperthreading between MPI processes
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['IN_MPI'] = '1'
+
     rank = MPI.COMM_WORLD.Get_rank()
     args = get_args()
 
@@ -140,7 +145,7 @@ if __name__ == '__main__':
     for agent_name in agent_names:
         if rank == 0:
             print(f'=-=-=-=-=-=-=-=-= {agent_name} =-=-=-=-=-=-=-=-=')
-        path = f'results/policies/{agent_name}/'
+        path = f'internalized_study/{agent_name}/'
         epoch = 120
         all_assignement_goals = []
         all_oracle_goals = []
