@@ -8,8 +8,7 @@ import networkit as nk
 
 class SpGraph():
     def __init__(self,args):
-        self.oracle_graph = SemanticGraph.load_oracle(args.oracle_path, 'oracle_block', args.n_blocks)
-        self.assignment_graph = SemanticGraph.load_oracle(args.oracle_path, args.oracle_name, args.n_blocks)
+        self.oracle_graph = SemanticGraph.load_oracle(args.oracle_path, args.oracle_name, args.n_blocks)
         self.args = args
         self.agent_frontier = {} # store configuration through networkit node_id from agent_graph
         self.agent_stepping_stones = {}
