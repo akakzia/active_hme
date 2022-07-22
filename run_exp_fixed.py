@@ -13,7 +13,7 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-q_ps = []
+q_ps = [0.5, 0.6, 0.7]
 nb_seeds = 3
 
 for i in range(nb_seeds):
@@ -45,7 +45,7 @@ for i in range(nb_seeds):
             fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
             fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-            fh.writelines(f"srun python -u -B train.py --fixed-query-proba {p} --save-dir 'fixed_proba={p}/' 2>&1 ")
+            fh.writelines(f"srun python -u -B train.py --fixed-query-proba {p} --save-dir 'new_fixed_proba={p}/' 2>&1 ")
 
         os.system("sbatch %s" % job_file)
         sleep(1)
