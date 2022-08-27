@@ -196,6 +196,9 @@ class GoalSampler:
         self.discovered_goals_str = MPI.COMM_WORLD.bcast(self.discovered_goals_str, root=0)
         self.discovered_goals_oracle_ids = MPI.COMM_WORLD.bcast(self.discovered_goals_oracle_ids, root=0)
         self.nb_discovered_goals = MPI.COMM_WORLD.bcast(self.nb_discovered_goals, root=0)
+        self.visits = MPI.COMM_WORLD.bcast(self.visits, root=0)
+        self.goal_to_id = MPI.COMM_WORLD.bcast(self.goal_to_id, root=0)
+        self.id_to_goal = MPI.COMM_WORLD.bcast(self.id_to_goal, root=0)
     
     def update_query_proba(self):
         # Compute Query Probabilities
