@@ -12,6 +12,8 @@ class GoalSampler:
         self.num_rollouts_per_mpi = args.num_rollouts_per_mpi
         self.rank = MPI.COMM_WORLD.Get_rank()
 
+        self.agent = args.agent
+
         self.n_blocks = args.n_blocks
         self.goal_dim = args.env_params['goal']
 
@@ -93,6 +95,17 @@ class GoalSampler:
         goal = self.id_to_goal[goal_id]
 
         return tuple(goal)
+    
+    def sample_intermediate_complexity_goal(self, n=50):
+        """ Samples goals based on their goal achievement value """
+        if len(self.values_goals) == 0:
+            return tuple(- np.ones(self.goal_dim))
+        
+        last_values = self.values_goals[-1]
+        goal_id = np.random.choice(np.argsort(last_values)[:50])
+        goal = self.id_to_goal[goal_id]
+
+        return tuple(goal)
         
     def update(self, episodes):
         """
@@ -151,11 +164,6 @@ class GoalSampler:
                         self.discovered_goals_per_stacks[c] += 1
                     except KeyError:
                         self.discovered_goals_per_stacks['others'] += 1
-                    
-                    # # Update mapping dictionnaries
-                    # self.goal_to_id[str(last_ag)] = self.nb_discovered_goals
-                    # self.id_to_goal[self.nb_discovered_goals] = str(last_ag)
-                    # self.visits.append(1)
 
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
@@ -163,16 +171,17 @@ class GoalSampler:
                 # if goal already encountered before, we are sure its index exists in the visits list
                 # Update number of visits
                 elif str(last_ag) in self.discovered_goals_str and condition_stability:
-                    i = self.goal_to_id[str(last_ag)]
                     self.visits[self.goal_to_id[str(last_ag)]] += 1
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
-                if self.internalization_strategy > 0 and str(goal) not in self.discovered_goals_str: 
-                    self.discovered_goals.append(goal.copy())
-                    self.discovered_goals_str.append(str(goal))
-                    self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
 
-                    # Increment number of discovered goals (to increment the id !)
-                    self.nb_discovered_goals += 1
+                if self.agent == 'HME':
+                    if self.internalization_strategy > 0 and str(goal) not in self.discovered_goals_str: 
+                        self.discovered_goals.append(goal.copy())
+                        self.discovered_goals_str.append(str(goal))
+                        self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
+
+                        # Increment number of discovered goals (to increment the id !)
+                        self.nb_discovered_goals += 1
 
         for e in episodes:
             # Set final reward

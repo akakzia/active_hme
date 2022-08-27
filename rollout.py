@@ -28,6 +28,17 @@ class RolloutWorker:
         self.args = args
         self.goal_dim = args.env_params['goal']
 
+        self.agent = args.agent
+        
+        if self.agent == 'HME':
+            self.frontier_type = 'f1'
+        elif self.agent == 'F2andRandom':
+            self.frontier_type = 'f2'
+        elif self.agent == 'F3andRandom':
+            self.frontier_type = 'f3'
+        else:
+            raise NotImplementedError
+
     def generate_rollout(self, goals, true_eval, animated=False):
 
         episodes = []
@@ -257,7 +268,7 @@ class HMERolloutWorker(RolloutWorker):
             current_episodes = []
             while len(current_episodes) < self.max_episodes:
                 if self.state == 'GoToFrontier':
-                    self.long_term_goal, time_sample = self.sample_goal_in_frontier(agent_network, frontier='f2')
+                    self.long_term_goal, time_sample = self.sample_goal_in_frontier(agent_network, frontier=self.frontier_type)
                     if time_dict:
                         time_dict['goal_sampler'] += time_sample
                     # if can't find frontier goal, explore directly
