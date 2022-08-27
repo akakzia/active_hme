@@ -38,21 +38,18 @@ def init_storage(args):
     if not os.path.exists(args.save_dir):
         os.mkdir(args.save_dir)
     # path to save the model
-    logdir = os.path.join(args.save_dir, '{}_{}_{}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), args.env_name, args.architecture))
-    logdir += '_{}'.format(args.reward_type)
+    date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    logdir = os.path.join(args.save_dir, f'{date_time}_{args.agent}_beta={args.beta}_{args.oracle_name}')
     # path to save evaluations
     model_path = os.path.join(logdir, 'models')
-    bucket_path = os.path.join(logdir, 'buckets')
     if not os.path.exists(logdir):
         os.mkdir(logdir)
     if not os.path.exists(model_path):
         os.mkdir(model_path)
-    if not os.path.exists(bucket_path):
-        os.mkdir(bucket_path)
 
     with open(os.path.join(logdir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent=2)
-    return logdir, model_path, bucket_path
+    return logdir, model_path
 
 
 def get_stat_func(line='mean', err='std'):

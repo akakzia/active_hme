@@ -41,7 +41,7 @@ def launch(args):
     # get saving paths
     logdir = None
     if rank == 0:
-        logdir, model_path, bucket_path = init_storage(args)
+        logdir, model_path = init_storage(args)
         logger.configure(dir=logdir)
         logger.info(vars(args))
     
@@ -152,7 +152,6 @@ def launch(args):
                 # Saving policy models
                 if epoch % args.save_freq == 0:
                     policy.save(model_path, epoch)
-                    goal_sampler.save_discovered_goals(bucket_path, epoch)
                 if rank==0: logger.info('\tEpoch #{}: SR: {}'.format(epoch, global_sr))
 
 

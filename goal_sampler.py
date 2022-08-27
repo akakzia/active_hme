@@ -280,8 +280,3 @@ class GoalSampler:
         for k in goals_per_class.keys():
             self.stats['# class_teacher {}'.format(k)].append(goals_per_class[k])
             self.stats['# class_agent {}'.format(k)].append(agent_stats[k])
-    
-    def save_discovered_goals(self, bucket_path, epoch):
-        # save list of discovered goals
-        with open(bucket_path + '/discovered_g_ep_{}.pkl'.format(epoch), 'wb') as f:
-            pickle.dump(self.discovered_goals, f)
