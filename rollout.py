@@ -160,7 +160,7 @@ class HMERolloutWorker(RolloutWorker):
         #     self.internalized_beyond = None
         self.state ='GoToFrontier'
 
-    def generate_one_rollout(self, goal,evaluation, episode_duration, animated=False):
+    def generate_one_rollout(self, goal,evaluation, episode_duration, animated=False, random=False):
         g = np.array(goal)
         self.env.unwrapped.target_goal = np.array(goal)
         self.env.unwrapped.binary_goal = np.array(goal)
@@ -173,7 +173,10 @@ class HMERolloutWorker(RolloutWorker):
             # Run policy for one step
             no_noise = evaluation  # do not use exploration noise if running self-evaluations or offline evaluations
             # feed both the observation and mask to the policy module
-            action = self.policy.act(obs.copy(), ag.copy(), g.copy(), no_noise)
+            if random:
+                action = self.env.action_space.sample()
+            else:
+                action = self.policy.act(obs.copy(), ag.copy(), g.copy(), no_noise)
 
             # feed the actions into the environment
             if animated:
@@ -209,7 +212,41 @@ class HMERolloutWorker(RolloutWorker):
         self.last_obs = observation_new
         self.last_episode = episode
 
-        return episode 
+        return episode
+    
+    def sample_goal_in_frontier(self, network, frontier='f1'):
+        """ Return a goal sampled in one of the following frontiers:
+        f1: frontier with reference to SP
+        f2: frontier with ref to the number of visits
+        f3: frontier with reference to competence
+        """
+        if self.long_term_goal is None:
+            if frontier == 'f1':
+                # Sample goal in the frontier of agent's exploration with reference to SP's model of the goal space
+                t_i = time.time()
+                frontier_ag = [network.semantic_graph.getConfig(i) for i in network.teacher.agent_frontier]
+                self.long_term_goal = random.choices(frontier_ag)[0]
+                if self.long_term_goal is not None:
+                    network.teacher.ss_interventions += 1
+                    self.long_term_goal = apply_on_table_config(self.long_term_goal)
+                time_sample = time.time() - t_i
+            elif frontier == 'f2':
+                # Sample goal in regions that are sparsely visited 
+                t_i = time.time()
+                self.long_term_goal = self.goal_sampler.sample_rare_goal()
+                time_sample = time.time() - t_i
+            elif frontier == 'f3':
+                # Sample goal that is neither too hard nor too simple (frontier of competence)
+                t_i = time.time()
+                self.long_term_goal = self.goal_sampler.sample_intermediate_complexity_goal()
+                time_sample = time.time() - t_i
+            else:
+                raise NotImplementedError
+
+
+            return self.long_term_goal, time_sample
+            
+        
 
     def perform_social_episodes(self, agent_network, time_dict):
         """ Inputs: agent_network and time_dict
@@ -220,20 +257,13 @@ class HMERolloutWorker(RolloutWorker):
             current_episodes = []
             while len(current_episodes) < self.max_episodes:
                 if self.state == 'GoToFrontier':
-                    if self.long_term_goal is None:
-                        t_i = time.time()
-                        frontier_ag = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
-                        self.long_term_goal = random.choices(frontier_ag)[0]
-                        # self.long_term_goal = next(iter(agent_network.sample_goal_in_frontier(self.current_config[:30], 1)), None)
-                        if self.long_term_goal is not None:
-                            agent_network.teacher.ss_interventions += 1
-                            self.long_term_goal = apply_on_table_config(self.long_term_goal)
-                        if time_dict:
-                            time_dict['goal_sampler'] += time.time() - t_i
-                        # if can't find frontier goal, explore directly
-                        if self.long_term_goal is None or (self.long_term_goal == self.current_config):
-                            self.state = 'Explore'
-                            continue
+                    self.long_term_goal, time_sample = self.sample_goal_in_frontier(agent_network, frontier='f2')
+                    if time_dict:
+                        time_dict['goal_sampler'] += time_sample
+                    # if can't find frontier goal, explore directly
+                    if self.long_term_goal is None or (self.long_term_goal == self.current_config):
+                        self.state = 'Explore'
+                        continue
                     no_noise = np.random.uniform() > self.exploration_noise_prob
                     episode = self.generate_one_rollout(self.long_term_goal, no_noise, self.episode_duration)
                     current_episodes.append(episode)
@@ -245,23 +275,28 @@ class HMERolloutWorker(RolloutWorker):
                         self.reset()
 
                 elif self.state == 'Explore':
-                    t_i = time.time()
-                    last_ag = tuple(self.last_obs['achieved_goal'][:30])
-                    explore_goal = next(iter(agent_network.sample_from_frontier(last_ag, 1)), None)  # first element or None
-                    if time_dict is not None:
-                        time_dict['goal_sampler'] += time.time() - t_i
-                    if explore_goal:
-                        explore_goal = apply_on_table_config(explore_goal)
-                        episode = self.generate_one_rollout(explore_goal, False, self.episode_duration)
+                    if self.algo == 'HME':
+                        t_i = time.time()
+                        last_ag = tuple(self.last_obs['achieved_goal'][:30])
+                        explore_goal = next(iter(agent_network.sample_from_frontier(last_ag, 1)), None)  # first element or None
+                        if time_dict is not None:
+                            time_dict['goal_sampler'] += time.time() - t_i
+                        if explore_goal:
+                            explore_goal = apply_on_table_config(explore_goal)
+                            episode = self.generate_one_rollout(explore_goal, False, self.episode_duration)
+                            current_episodes.append(episode)
+                            success = episode['success'][-1]
+                            if not success and self.long_term_goal:
+                                # Add pair to agent's memory
+                                self.stepping_stones_beyond_pairs_list.append((self.long_term_goal, explore_goal))
+                                self.beyond_list.append(explore_goal)
+                        if explore_goal is None or not success:
+                            self.reset()
+                            continue
+                    else: 
+                        # Perform random actions, no goal needed here
+                        episode = self.generate_one_rollout(self.current_config, False, self.episode_duration)
                         current_episodes.append(episode)
-                        success = episode['success'][-1]
-                        if not success and self.long_term_goal:
-                            # Add pair to agent's memory
-                            self.stepping_stones_beyond_pairs_list.append((self.long_term_goal, explore_goal))
-                            self.beyond_list.append(explore_goal)
-                    if explore_goal is None or not success:
-                        self.reset()
-                        continue
                 else:
                     raise Exception(f"unknown state : {self.state}")
             
@@ -339,16 +374,7 @@ class HMERolloutWorker(RolloutWorker):
 
     def launch_social_phase(self, agent_network, time_dict):
         """ Launch the social episodes phase: 
-        1/ If there are some remaining (stepping stones, beyond) from internalization, than the agent selects to rehearse
-        2/ If not than ask social partner """
-        # Check the list of internalized pairs
-        # If list is not empty, than rehearse social interventions
-        # Else, ask social partner
-        # if len(self.stepping_stones_beyond_pairs_list) > 0 and self.args.beta > 0 and self.attention_to_internalized_pairs:
-        #     # internalize SP pairs
-        #     generated_episodes = self.internalize_social_episodes(time_dict)
-        # else:
-        #     # SP intervenes
+        First, produce rollouts. Then, concatenate obtained rollouts and relabel based on the beyond goal"""
         generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
         all_episodes = merge_mini_episodes_and_relabel(generated_episodes)

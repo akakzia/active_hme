@@ -23,6 +23,13 @@ class GoalSampler:
         self.discovered_goals_str = []
         self.discovered_goals_oracle_ids = []
 
+        # Define mapping dict between goals and indexes of discovery
+        self.goal_to_id = {}
+        self.id_to_goal = {}
+
+        # Define list of counts of goal visits. Indexes of the list are indexes of goals. Values are the visits
+        self.visits = []
+
         # Initialize value estimations list
         self.values_goals = []
 
@@ -70,14 +77,23 @@ class GoalSampler:
             goals = np.array(goals)
         else:
             if len(self.discovered_goals) == 0:
-                # goals = np.random.choice([-1., 1.], size=(n_goals, self.goal_dim))
                 goals = - np.ones((n_goals, self.goal_dim))
             else:
                 # sample uniformly from discovered goals
                 goal_ids = np.random.choice(range(len(self.discovered_goals)), size=n_goals)
                 goals = np.array(self.discovered_goals)[goal_ids]
         return goals
+    
+    def sample_rare_goal(self, n=50):
+        """ Samples goals in sparsely explored areas of the goal space (goals that are the least visited) """
+        visits_buffer = np.array(self.visits)
+        if len(visits_buffer) == 0:
+            return tuple(- np.ones(self.goal_dim))
+        goal_id = np.random.choice(np.argsort(visits_buffer)[:n])
+        goal = self.id_to_goal[goal_id]
 
+        return tuple(goal)
+        
     def update(self, episodes):
         """
         Update discovered goals list from episodes
@@ -114,22 +130,19 @@ class GoalSampler:
                 goal = e['g'][-1]
                 if self.use_stability_condition:
                     # Compute boolean conditions to determine the discovered goal stability 
-                    # 1: the goal is stable for the last 10 steps
+                    # the goal is stable for the last 10 steps
                     condition_stability = np.sum([str(last_ag) == str(el) for el in e['ag'][-10:]]) == 10.
-                    # # 2: Gripper is far from all objects
-                    # last_obs = e['obs'][-1]
-                    # pos_gripper = last_obs[:3]
-                    # pos_objects = [last_obs[10 + 15 * i: 13 + 15 * i] for i in range(5)]
-                    # condition_far = np.sum([np.linalg.norm(pos_gripper - pos_ob) >= 0.09 for pos_ob in pos_objects]) == 5.
                 else:
                     # Always true
                     condition_stability = True
-                    # condition_far = True
                 # Add last achieved goal to memory if first time encountered
                 if str(last_ag) not in self.discovered_goals_str and condition_stability:
                     self.discovered_goals.append(last_ag.copy())
                     self.discovered_goals_str.append(str(last_ag))
                     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
+                    self.goal_to_id[str(last_ag)] = self.nb_discovered_goals
+                    self.id_to_goal[self.nb_discovered_goals] = str(last_ag)
+                    self.visits.append(1)
 
                     # Check to which stack class corresponds the discovered goal
                     above_predicates = last_ag[10:30]
@@ -138,9 +151,20 @@ class GoalSampler:
                         self.discovered_goals_per_stacks[c] += 1
                     except KeyError:
                         self.discovered_goals_per_stacks['others'] += 1
+                    
+                    # # Update mapping dictionnaries
+                    # self.goal_to_id[str(last_ag)] = self.nb_discovered_goals
+                    # self.id_to_goal[self.nb_discovered_goals] = str(last_ag)
+                    # self.visits.append(1)
 
                     # Increment number of discovered goals (to increment the id !)
                     self.nb_discovered_goals += 1
+                
+                # if goal already encountered before, we are sure its index exists in the visits list
+                # Update number of visits
+                elif str(last_ag) in self.discovered_goals_str and condition_stability:
+                    i = self.goal_to_id[str(last_ag)]
+                    self.visits[self.goal_to_id[str(last_ag)]] += 1
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
                 if self.internalization_strategy > 0 and str(goal) not in self.discovered_goals_str: 
                     self.discovered_goals.append(goal.copy())

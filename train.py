@@ -78,7 +78,7 @@ def launch(args):
         for _ in range(args.n_cycles):
             # Environment interactions
             t_i = time.time()
-            episodes, episodes_type = rollout_worker.train_rollout(agent_network= agent_network,
+            episodes, episodes_type = rollout_worker.train_rollout(agent_network=agent_network,
                                                                    epoch=epoch,
                                                                    time_dict=time_dict)
             time_dict['rollout'] += time.time() - t_i
