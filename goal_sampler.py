@@ -27,7 +27,7 @@ class GoalSampler:
 
         # Define mapping dict between goals and indexes of discovery
         self.goal_to_id = {}
-        self.id_to_goal = {}
+        # self.id_to_goal = {}
 
         # Define list of counts of goal visits. Indexes of the list are indexes of goals. Values are the visits
         self.visits = []
@@ -92,7 +92,7 @@ class GoalSampler:
         if len(visits_buffer) == 0:
             return tuple(- np.ones(self.goal_dim))
         goal_id = np.random.choice(np.argsort(visits_buffer)[:n])
-        goal = self.id_to_goal[goal_id]
+        goal = self.discovered_goals[goal_id]
 
         return tuple(goal)
     
@@ -101,9 +101,9 @@ class GoalSampler:
         if len(self.values_goals) == 0:
             return tuple(- np.ones(self.goal_dim))
         
-        last_values = self.values_goals[-1]
-        goal_id = np.random.choice(np.argsort(last_values)[:50])
-        goal = self.id_to_goal[goal_id]
+        last_values = self.values_goals[-1].squeeze()
+        goal_id = np.random.choice(np.argsort(last_values)[:n])
+        goal = self.discovered_goals[goal_id]
 
         return tuple(goal)
         
@@ -154,7 +154,7 @@ class GoalSampler:
                     self.discovered_goals_str.append(str(last_ag))
                     self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
                     self.goal_to_id[str(last_ag)] = self.nb_discovered_goals
-                    self.id_to_goal[self.nb_discovered_goals] = str(last_ag)
+                    # self.id_to_goal[self.nb_discovered_goals] = str(last_ag)
                     self.visits.append(1)
 
                     # Check to which stack class corresponds the discovered goal
@@ -198,7 +198,7 @@ class GoalSampler:
         self.nb_discovered_goals = MPI.COMM_WORLD.bcast(self.nb_discovered_goals, root=0)
         self.visits = MPI.COMM_WORLD.bcast(self.visits, root=0)
         self.goal_to_id = MPI.COMM_WORLD.bcast(self.goal_to_id, root=0)
-        self.id_to_goal = MPI.COMM_WORLD.bcast(self.id_to_goal, root=0)
+        # self.id_to_goal = MPI.COMM_WORLD.bcast(self.id_to_goal, root=0)
     
     def update_query_proba(self):
         # Compute Query Probabilities

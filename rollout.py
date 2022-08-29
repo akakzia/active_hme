@@ -286,7 +286,7 @@ class HMERolloutWorker(RolloutWorker):
                         self.reset()
 
                 elif self.state == 'Explore':
-                    if self.algo == 'HME':
+                    if self.agent == 'HME':
                         t_i = time.time()
                         last_ag = tuple(self.last_obs['achieved_goal'][:30])
                         explore_goal = next(iter(agent_network.sample_from_frontier(last_ag, 1)), None)  # first element or None
