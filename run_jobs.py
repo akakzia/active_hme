@@ -14,7 +14,6 @@ scratch = os.environ['SCRATCH']
 mkdir_p(job_directory)
 
 betas = [20, 50, 100, 200, 500]
-planning_probas = [0]
 nb_seeds = 3
 
 for s in range(nb_seeds):
@@ -30,8 +29,9 @@ for s in range(nb_seeds):
             fh.writelines(f"#SBATCH --error=main_beta={beta}_%_%j.out\n")
             fh.writelines("#SBATCH --time=19:59:59\n")
             fh.writelines("#SBATCH --ntasks=24\n")
-            fh.writelines("#SBATCH --ntasks-per-node=1\n")
-            fh.writelines("#SBATCH --gres=gpu:1\n")
+            fh.writelines("#SBATCH --ntasks-per-node=4\n")
+            fh.writelines("#SBATCH --gres=gpu:4\n")
+            fh.writelines("#SBATCH --cpus-per-task=10\n")
             fh.writelines("#SBATCH --hint=nomultithread\n")
             fh.writelines("#SBATCH --array=0-0\n")
 
@@ -46,7 +46,7 @@ for s in range(nb_seeds):
             fh.writelines("export OMPI_MCA_btl_openib_warn_default_gid_prefix=0\n")
             fh.writelines("export OMPI_MCA_mpi_warn_on_fork=0\n")
 
-            fh.writelines(f"srun python -u -B train.py  --beta {beta} --save-dir 'main_beta={beta}/' 2>&1 ")
+            fh.writelines(f"srun python -u -B train.py  --beta {beta} --internalization-strategy 1 --save-dir 'main_beta={beta}/' 2>&1 ")
 
         os.system("sbatch %s" % job_file)
         sleep(1)
