@@ -13,7 +13,7 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-agents = ['F2andRandom', 'F3andRandom', 'UniformandRandom']
+agents = ['F2andRandom', 'F3andRandom', 'UniformandRandom', 'VDSAgent', 'LPAgent']
 nb_seeds = 1
 
 for s in range(nb_seeds):

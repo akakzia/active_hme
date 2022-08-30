@@ -70,6 +70,8 @@ def get_args():
     parser.add_argument('--fixed-queries', type=bool, default=False, help='either to perform fixed queries or active ones')
     parser.add_argument('--fixed-query-proba', type=float, default=0.1, help='fixed query proba, ignored if using active queries')
 
+    parser.add_argument('--eps-uniform-goal', type=float, default=1., help='default 1, used in ACL methods to perform curriculum-based babbling')
+
     args = parser.parse_args()
 
     return args

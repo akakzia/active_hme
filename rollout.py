@@ -38,8 +38,6 @@ class RolloutWorker:
             self.frontier_type = 'f3'
         elif self.agent == 'UniformandRandom':
             self.frontier_type = 'f4'
-        else:
-            raise NotImplementedError
 
     def generate_rollout(self, goals, true_eval, animated=False):
 
@@ -319,7 +317,13 @@ class HMERolloutWorker(RolloutWorker):
         rehearsing the frontier/beyond procedure """
         # Perform uniform autotelic episodes
         t_i = time.time()
-        goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+        if np.random.uniform() < self.args.eps_uniform_goal or len(self.goal_sampler.discovered_goals) == 0:
+            goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+        else:
+            if self.agent == 'LPAgent':
+                goals = self.goal_sampler.sample_lp_goals(n_goals=self.args.num_rollouts_per_mpi)
+            elif self.agent == 'VDSAgent':
+                goals = self.goal_sampler.sample_vds_goals(initial_obs=self.last_obs ,n_goals=self.args.num_rollouts_per_mpi)
         time_dict['goal_sampler'] += time.time() - t_i
         all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
                                             true_eval=False,  # these are not offline evaluation episodes

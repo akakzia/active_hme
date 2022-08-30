@@ -1,4 +1,5 @@
 from dis import dis
+import torch
 import numpy as np
 from utils import generate_stacks_to_class, get_eval_goals
 from utils import INSTRUCTIONS
@@ -17,6 +18,7 @@ class GoalSampler:
         self.n_blocks = args.n_blocks
         self.goal_dim = args.env_params['goal']
 
+        self.args = args
         # Keep track of the number of discovered goals
         self.nb_discovered_goals = 0
 
@@ -104,7 +106,47 @@ class GoalSampler:
         goal = self.discovered_goals[goal_id]
 
         return tuple(goal)
+
+    def sample_lp_goals(self, n_goals=1, n=50):
+        """ Samples goals based on their goal achievement value """
+        if len(self.values_goals) == 0:
+            return - np.ones((n_goals, self.goal_dim))
+        
+        last_values = self.values_goals[-1].squeeze()
+        goal_ids = np.random.choice(np.argsort(last_values)[:n], size=n_goals)
+        goals = np.array(self.discovered_goals)[goal_ids]
+
+        return goals
     
+    def sample_vds_goals(self, initial_obs, n_goals=1):
+        """ Sample goals based on value disagreement 
+        We need initial observation to perform forward pass in Q networks """
+        n = min(1000, len(self.discovered_goals))
+        goals = self.sample_goals(n_goals=n)
+        observations = np.repeat(np.expand_dims(initial_obs['observation'], axis=0), n, axis=0)
+        ag = np.repeat(np.expand_dims(initial_obs['achieved_goal'], axis=0), n, axis=0)
+
+        obs_norm = self.goal_evaluator.policy.o_norm.normalize(observations)
+
+        obs_norm_tensor = torch.tensor(obs_norm, dtype=torch.float32)
+        g_tensor = torch.tensor(goals, dtype=torch.float32)
+        ag_tensor = torch.tensor(ag, dtype=torch.float32)
+        if self.args.cuda:
+            obs_norm_tensor.cuda()
+            g_tensor.cuda()
+            ag_tensor.cuda()
+        
+        with torch.no_grad():
+            self.goal_evaluator.policy.model.forward_pass(obs_norm_tensor, ag_tensor, g_tensor)
+            qf1_vd, qf2_vd, qf3_vd = self.goal_evaluator.policy.model.target_q1_vd_tensor.numpy(), self.goal_evaluator.policy.model.target_q2_vd_tensor.numpy(),\
+                                        self.goal_evaluator.policy.model.target_q3_vd_tensor.numpy()
+            qs = np.concatenate([qf1_vd, qf2_vd, qf3_vd], axis=1)
+            scores = np.std(qs, axis=1)**2
+            normalized_scores = scores / np.sum(scores)
+            selected_goals = goals[np.random.choice(np.arange(n), p=normalized_scores, size=n_goals)]
+        
+        return selected_goals
+
     def sample_uniform_goal(self):
         """ Samples goals based on their goal achievement value """
         goal_id = np.random.choice(range(len(self.discovered_goals)))

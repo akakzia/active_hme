@@ -4,7 +4,7 @@ from mpi_utils.mpi_utils import sync_networks
 from rl_modules.replay_buffer import ReplayBuffer
 from mpi_utils.normalizer import normalizer
 from her_modules.her import her_sampler
-from updates import update_gnns
+from updates import update_gnns, update_gnns_vds
 from utils import hard_update
 
 
@@ -28,7 +28,10 @@ class RLAgent:
         # create the network
         self.architecture = self.args.architecture
 
-        if self.architecture == 'flat':
+        if self.args.agent == 'VDSAgent':
+            from rl_modules.rn_vds_modules import RnSemantic
+            self.model = RnSemantic(self.env_params, args)
+        elif self.architecture == 'flat':
             from rl_modules.flat_models import FlatSemantic
             self.model = FlatSemantic(self.env_params)
         elif self.architecture == 'interaction_network':
@@ -52,17 +55,26 @@ class RLAgent:
             self.model.critic.cuda()
             self.model.critic_target.cuda()
             self.model.value_network.cuda()
+            if self.args.agent == 'VDSAgent':
+                self.model.vds_q_values.cuda()
+                self.model.vds_target_q_values.cuda()
         # sync the networks across the CPUs
         sync_networks(self.model.critic)
         sync_networks(self.model.actor)
         hard_update(self.model.critic_target, self.model.critic)
         sync_networks(self.model.critic_target)
         sync_networks(self.model.value_network)
+        if self.args.agent == 'VDSAgent':
+            sync_networks(self.model.vds_q_values)
+            hard_update(self.model.vds_target_q_values, self.model.vds_q_values)
 
         # create the optimizer
         self.policy_optim = torch.optim.Adam(list(self.model.actor.parameters()), lr=self.args.lr_actor)
         self.critic_optim = torch.optim.Adam(list(self.model.critic.parameters()), lr=self.args.lr_critic)
         self.value_optim = torch.optim.Adam(list(self.model.value_network.parameters()), lr=self.args.lr_critic)
+        if self.args.agent == 'VDSAgent':
+            self.vds_optim = torch.optim.Adam(list(self.model.vds_q_values.parameters()),
+                                             lr=self.args.lr_critic)
         
         # create the normalizer
         self.o_norm = normalizer(size=self.env_params['obs'], default_clip_range=self.args.clip_range)
@@ -199,9 +211,14 @@ class RLAgent:
 
         anchor_g_norm = transitions['anchor_g']
 
-        update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
-                    self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
-                    final_rewards, self.args)
+        if self.args.agent == 'VDSAgent':
+            update_gnns_vds(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
+                        self.alpha_optim, self.vds_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
+                        final_rewards, self.args)
+        else:
+            update_gnns(self.model, self.policy_optim, self.critic_optim, self.value_optim, self.alpha, self.log_alpha, self.target_entropy, 
+                        self.alpha_optim, obs_norm, ag_norm, g_norm, anchor_g_norm, obs_next_norm, ag_next_norm, actions, rewards, anchor_rewards,
+                        final_rewards, self.args)
 
     def save(self, model_path, epoch):
         """ Save model """

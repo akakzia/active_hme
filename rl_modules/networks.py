@@ -223,6 +223,31 @@ class RhoValueDeepSet(nn.Module):
 
         return x1
 
+class VdRhoCriticDeepSet(nn.Module):
+    def __init__(self, inp, out):
+        super(VdRhoCriticDeepSet, self).__init__()
+        self.linear1 = nn.Linear(inp, 256)
+        self.linear2 = nn.Linear(256, out)
+
+        self.linear3 = nn.Linear(inp, 256)
+        self.linear4 = nn.Linear(256, out)
+
+        self.linear5 = nn.Linear(inp, 256)
+        self.linear6 = nn.Linear(256, out)
+
+        self.apply(weights_init_)
+
+    def forward(self, inp):
+        x1 = F.relu(self.linear1(inp))
+        x1 = self.linear2(x1)
+
+        x2 = F.relu(self.linear3(inp))
+        x2 = self.linear4(x2)
+
+        x3 = F.relu(self.linear5(inp))
+        x3 = self.linear6(x3)
+
+        return x1, x2, x3
 class GnnAttention(nn.Module):
     def __init__(self, inp, hid, out):
         super(GnnAttention, self).__init__()

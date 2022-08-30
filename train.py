@@ -180,4 +180,13 @@ if __name__ == '__main__':
     # Get parameters
     args = get_args()
 
+    # Align arguments according to agent
+    if args.agent in ['F2andRandom', 'F3andRandom', 'UniformandRandom']:
+        args.fixed_queries = True
+        args.fixed_query_proba = 0.8 # probability of following the goal chaining curriculum (with p=0.2, randomly target goal and pursue it)
+
+    if args.agent in ['LPAgent', 'VDSAgent']:
+        args.fixed_queries = True
+        args.fixed_query_proba = 0
+        args.eps_uniform_goal = 0.2
     launch(args)
