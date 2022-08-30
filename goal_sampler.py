@@ -106,6 +106,13 @@ class GoalSampler:
         goal = self.discovered_goals[goal_id]
 
         return tuple(goal)
+    
+    def sample_uniform_goal(self):
+        """ Samples goals based on their goal achievement value """
+        goal_id = np.random.choice(range(len(self.discovered_goals)))
+        goal = self.discovered_goals[goal_id]
+
+        return tuple(goal)
         
     def update(self, episodes):
         """

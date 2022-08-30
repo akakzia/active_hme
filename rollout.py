@@ -36,6 +36,8 @@ class RolloutWorker:
             self.frontier_type = 'f2'
         elif self.agent == 'F3andRandom':
             self.frontier_type = 'f3'
+        elif self.agent == 'UniformandRandom':
+            self.frontier_type = 'f4'
         else:
             raise NotImplementedError
 
@@ -250,6 +252,11 @@ class HMERolloutWorker(RolloutWorker):
                 # Sample goal that is neither too hard nor too simple (frontier of competence)
                 t_i = time.time()
                 self.long_term_goal = self.goal_sampler.sample_intermediate_complexity_goal()
+                time_sample = time.time() - t_i
+            elif frontier == 'f4':
+                # Sample goal uniformly from the set of discovered goals then continue with random actions
+                t_i = time.time()
+                self.long_term_goal = self.goal_sampler.sample_uniform_goal()
                 time_sample = time.time() - t_i
             else:
                 raise NotImplementedError

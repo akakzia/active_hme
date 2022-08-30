@@ -74,7 +74,7 @@ def get_args():
 
     parser.add_argument('--n-freeplay-epochs', type=int, default=5, help='test')
 
-    parser.add_argument('--query-proba-update-freq', type=int, default=1, help='In how many episodes update the query proba')
+    parser.add_argument('--query-proba-update-freq', type=int, default=300, help='In how many episodes update the query proba')
 
     parser.add_argument('--fixed-queries', type=bool, default=False, help='test')
     parser.add_argument('--fixed-query-proba', type=float, default=0.1, help='test')

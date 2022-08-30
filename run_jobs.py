@@ -13,7 +13,7 @@ scratch = os.environ['SCRATCH']
 # Make top level directories
 mkdir_p(job_directory)
 
-agents = ['HME', 'F2andRandom', 'F3andRandom']
+agents = ['F2andRandom', 'F3andRandom', 'UniformandRandom']
 nb_seeds = 1
 
 for s in range(nb_seeds):
@@ -28,10 +28,9 @@ for s in range(nb_seeds):
             fh.writelines(f"#SBATCH --output=test_agent={agent}_%_%j.out\n")
             fh.writelines(f"#SBATCH --error=test_agent={agent}_%_%j.out\n")
             fh.writelines("#SBATCH --time=19:59:59\n")
-            fh.writelines("#SBATCH --ntasks=24\n")
-            fh.writelines("#SBATCH --ntasks-per-node=4\n")
-            fh.writelines("#SBATCH --gres=gpu:4\n")
-            fh.writelines("#SBATCH --cpus-per-task=10\n")
+            fh.writelines("#SBATCH --ntasks=20\n")
+            fh.writelines("#SBATCH --ntasks-per-node=1\n")
+            fh.writelines("#SBATCH --gres=gpu:1\n")
             fh.writelines("#SBATCH --hint=nomultithread\n")
             fh.writelines("#SBATCH --array=0-0\n")
 
