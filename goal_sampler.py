@@ -55,7 +55,6 @@ class GoalSampler:
 
         self.use_stability_condition = args.use_stability_condition
 
-        self.internalization_strategy = args.internalization_strategy
         self.ss_b_pairs = []
         self.beyond = []
 
@@ -181,7 +180,7 @@ class GoalSampler:
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
 
                 if self.agent == 'HME':
-                    if self.internalization_strategy > 0 and str(goal) not in self.discovered_goals_str: 
+                    if str(goal) not in self.discovered_goals_str: 
                         self.discovered_goals.append(goal.copy())
                         self.discovered_goals_str.append(str(goal))
                         self.discovered_goals_oracle_ids.append(self.nb_discovered_goals)
@@ -229,31 +228,6 @@ class GoalSampler:
         self.ss_b_pairs = ss_b_pairs
         self.beyond = b
 
-    def do_internalization(self):
-        """ Decide whether to do internalization or not
-        Check the list of beyond goals, evaluate them
-        Return True if at least one value is below a threshold """
-        if len(self.beyond) == 0 or self.internalization_strategy < 2:
-            return False, None, 0.
-        if self.internalization_strategy == 3 or self.internalization_strategy == 4:
-            norm_values = self.goal_evaluator.estimate_goal_value(goals=np.array(self.beyond))
-        elif self.internalization_strategy == 2:
-            ag = np.array([i for (i, _) in self.ss_b_pairs])
-            g = np.array([f for (_, f) in self.ss_b_pairs])
-            norm_values = self.goal_evaluator.estimate_goal_value(goals=g, ag=ag)
-        else:
-            raise NotImplementedError
-        try:
-            least_value = norm_values[np.argsort(norm_values)[0]]
-        except IndexError:
-            # avoid the case where only one goal is internalized and norm_values is scalar
-            least_value = norm_values
-        proba_intern_query = np.exp(- 3 * least_value)
-        do_internalization = np.random.uniform() < proba_intern_query
-        ind = np.random.choice(np.argsort(norm_values)[:5], size=2)
-        return do_internalization, ind, proba_intern_query
-
-
     def generate_intermediate_goal(self, goal):
         """ Given a goal, uses goal evaluator to generate intermediate goal that maximize the value """
         # res = []
@@ -297,7 +271,6 @@ class GoalSampler:
         self.stats['proposed_ss'] = []
         self.stats['proposed_beyond'] = []
         self.stats['query_proba'] = []
-        self.stats['query_proba_intern'] = []
         keys = ['goal_sampler', 'rollout', 'gs_update', 'store', 'norm_update', 'update_graph', 
                 'policy_train', 'eval', 'epoch', 'total']
         for k in keys:

@@ -54,22 +54,14 @@ def get_args():
     # the goal evaluator arguments
     parser.add_argument('--normalization-technique', type=str, default='linear_fixed', help='[linear_fixed, linear_moving, mixed]')
     parser.add_argument('--use-stability-condition', type=bool, default=True, help='only consider stable goals as discovered')
-    
-    parser.add_argument('--data-augmentation', type=bool, default=True, help='Augment guided episodes by relabeling')
 
     parser.add_argument('--min-queue-length', type=int, default=50, help='minimum queue length to update query proba')
     parser.add_argument('--max-queue-length', type=int, default=200, help='maximum window of query proba update')
     parser.add_argument('--beta', type=int, default=50, help='sensitivity to social signals. 0: Social; 500: Autotelic')
     parser.add_argument('--progress-function', type=str, default='mean', help='aggregation function to compute query proba')
 
-    parser.add_argument('--autotelic-planning-proba', type=float, default=0., help='probability to perform planning')
-
     parser.add_argument('--oracle-path', type=str, default='data/', help='path to SP model of the goal space')
     parser.add_argument('--oracle-name', type=str, default='oracle_perm_block', help='the nature of assignment space to be used')
-
-    parser.add_argument('--apply-her-on-social', type=bool, default=True, help='when social episode, either to replay with HER')
-
-    parser.add_argument('--internalization-strategy', type=int, default=1, help='0: None; 1, 2, 3, 4 to be described later')
 
     parser.add_argument('--n-freeplay-epochs', type=int, default=5, help='number of epochs where agents must perform autotelic episodes')
 
