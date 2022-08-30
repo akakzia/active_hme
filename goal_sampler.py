@@ -56,7 +56,6 @@ class GoalSampler:
         self.use_stability_condition = args.use_stability_condition
 
         self.internalization_strategy = args.internalization_strategy
-        self.internalization_threshold = args.internalization_threshold
         self.ss_b_pairs = []
         self.beyond = []
 
@@ -244,7 +243,6 @@ class GoalSampler:
             norm_values = self.goal_evaluator.estimate_goal_value(goals=g, ag=ag)
         else:
             raise NotImplementedError
-        # do_internalization = (norm_values < self.internalization_threshold).any()
         try:
             least_value = norm_values[np.argsort(norm_values)[0]]
         except IndexError:
