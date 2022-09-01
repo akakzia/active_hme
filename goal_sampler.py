@@ -138,8 +138,8 @@ class GoalSampler:
         
         with torch.no_grad():
             self.goal_evaluator.policy.model.forward_pass(obs_norm_tensor, ag_tensor, g_tensor)
-            qf1_vd, qf2_vd, qf3_vd = self.goal_evaluator.policy.model.target_q1_vd_tensor.numpy(), self.goal_evaluator.policy.model.target_q2_vd_tensor.numpy(),\
-                                        self.goal_evaluator.policy.model.target_q3_vd_tensor.numpy()
+            qf1_vd, qf2_vd, qf3_vd = self.goal_evaluator.policy.model.target_q1_vd_tensor.cpu().numpy(), self.goal_evaluator.policy.model.target_q2_vd_tensor.cpu.numpy(),\
+                                        self.goal_evaluator.policy.model.target_q3_vd_tensor.cpu().numpy()
             qs = np.concatenate([qf1_vd, qf2_vd, qf3_vd], axis=1)
             scores = np.std(qs, axis=1)**2
             normalized_scores = scores / np.sum(scores)
