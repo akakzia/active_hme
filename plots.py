@@ -23,12 +23,12 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
 cmap = plt.get_cmap('tab10')
 # colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
 colors = np.array(cmap.colors)
-folder = 'acl_study'
+folder = 'query_study'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/iclr2023/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/iclr2023/'
-TO_PLOT = ['_global_sr']
-# TO_PLOT = ['stepping_stones_len']
+# TO_PLOT = ['_global_sr']
+TO_PLOT = ['proposed_beyond']
 
 metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
                    'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
@@ -45,11 +45,11 @@ MARKERSIZE = 15 # 15 for per class
 ALPHA = 0.3
 ALPHA_TEST = 0.05
 MARKERS = ['o', 'v', 's', 'P', 'D', 'X', "*", 'v', 's', 'p', 'P', '1']
-FREQ = 5
+FREQ = 1
 NB_BUCKETS = 10
 NB_EPS_PER_EPOCH = 2000
 NB_VALID_GOALS = 35
-LAST_EP = 130
+LAST_EP = 122
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
 line, err_min, err_plus = get_stat_func(line=LINE, err=ERR)
 COMPRESSOR = CompressPDF(4)
@@ -431,7 +431,7 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
     for i in range(len(conditions)):
         print(labels[i])
         if to_plot == 'proposed_ss':
-            print(f'{probas_per_cond_stats[i, -1, 0]/3048}+={(probas_per_cond_stats[i, -1, 2] - probas_per_cond_stats[i, -1, 0])/3048}')
+            print(f'{probas_per_cond_stats[i, -1, 0]}+={(probas_per_cond_stats[i, -1, 2] - probas_per_cond_stats[i, -1, 0])}')
         else: 
             print(f'{probas_per_cond_stats[i, -1, 0]}+={(probas_per_cond_stats[i, -1, 2] - probas_per_cond_stats[i, -1, 0])}')
         print('===========')
@@ -554,7 +554,10 @@ if __name__ == '__main__':
         # conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F2andRandom', 'F3andRandom']]
         # labels = [f'{b}' for b in ['HME-β=50', 'Uniform&Random', 'F2&Random', 'F3&Random']]
         # ACL Study 
-        conditions = [f'agent={p}' for p in ['HME', 'LPAgent']]
-        labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline']]
-        get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
-        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=150)
+        # conditions = [f'agent={p}' for p in ['HME', 'LPAgent']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline']]
+        # Fixed queries study
+        conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
+        labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=150)
