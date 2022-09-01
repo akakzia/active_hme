@@ -10,7 +10,7 @@ import json
 from scipy.stats import ttest_ind
 from utils import get_stat_func, CompressPDF
 
-font = {'size': 50}
+font = {'size': 70}
 matplotlib.rc('font', **font)
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -23,12 +23,12 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
 cmap = plt.get_cmap('tab10')
 # colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
 colors = np.array(cmap.colors)
-folder = 'main_experiments'
+folder = 'acl_study'
 
-RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/' + folder + '/'
-SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/'
-# TO_PLOT = ['_global_sr']
-TO_PLOT = ['stepping_stones_len']
+RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/iclr2023/' + folder + '/'
+SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/iclr2023/'
+TO_PLOT = ['_global_sr']
+# TO_PLOT = ['stepping_stones_len']
 
 metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
                    'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
@@ -40,14 +40,14 @@ ERR = 'std'
 DPI = 30
 N_SEEDS = None
 N_EPOCHS = None
-LINEWIDTH = 5 # 8 for per class
-MARKERSIZE = 1 # 15 for per class
+LINEWIDTH = 8 # 8 for per class
+MARKERSIZE = 15 # 15 for per class
 ALPHA = 0.3
 ALPHA_TEST = 0.05
 MARKERS = ['o', 'v', 's', 'P', 'D', 'X', "*", 'v', 's', 'p', 'P', '1']
-FREQ = 10
+FREQ = 5
 NB_BUCKETS = 10
-NB_EPS_PER_EPOCH = 2400
+NB_EPS_PER_EPOCH = 2000
 NB_VALID_GOALS = 35
 LAST_EP = 130
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
@@ -347,7 +347,7 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                                # xlabel='Epochs',
                                ylabel='Success Rate',
                                xlim=[-1, LIM],
-                               ylim=[-0.02, 1 + 0.04 * len(labels)])
+                               ylim=[-0.02, 1 + 0.045 * len(labels)])
 
     for i in range(len(conditions)):
         plt.plot(x_eps, sr_per_cond_stats[i, x, 0], color=colors[i], marker=MARKERS[i], markersize=MARKERSIZE, linewidth=LINEWIDTH)
@@ -383,17 +383,20 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                     p_vals[i_cond].append(ttest_ind(ref, other, equal_var=False)[1])
                 else:
                     p_vals[i_cond].append(1)
-                    
+
+    i = 0    
     for i_cond in range(len(conditions)):
         if i_cond != ref_id:
             inds_sign = np.argwhere(np.array(p_vals[i_cond]) < ALPHA_TEST).flatten()
             if inds_sign.size > 0:
-                plt.scatter(x=x_eps[inds_sign], y=np.ones([inds_sign.size]) - 0.04 + 0.05 * i_cond, marker='*', color=colors[i_cond], s=1300)
+                plt.scatter(x=x_eps[inds_sign], y=np.ones([inds_sign.size]) + 0.04 + 0.05 * i, marker='*', color=colors[i_cond], s=1000)
+            i += 1
 
-    ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+    ax.hlines(y=0.93, xmin=0, xmax=(LAST_EP + 1) * NB_EPS_PER_EPOCH / 1000, color='black', linewidth=3, linestyles='dashed')
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 0.93, 1])
     plt.grid()
     # ax.set_facecolor((244/255, 244/255, 244/255))
-    save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
+    save_fig(path=SAVE_PATH + folder + PLOT + '.pdf', artists=artists)
     return sr_per_cond_stats.copy()
 
 def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to_plot='query_proba', max_value=1.):
@@ -545,7 +548,13 @@ if __name__ == '__main__':
         # plot_counts_and_sr(experiment_path=experiment_path, conditions=['main_beta=50'])
 
         # Study main
-        conditions = [f'main_beta={p}' for p in [20, 50, 100]]
-        labels = [f'β={b}' for b in [20, 50, 100]]
-        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
-        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=150)
+        # conditions = [f'main_beta={p}' for p in [0, 20, 50, 100, 200, 500]]
+        # labels = [f'β={b}' for b in [0, 20, 50, 100, 200, 500]]
+        # Exploration Study
+        # conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F2andRandom', 'F3andRandom']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'Uniform&Random', 'F2&Random', 'F3&Random']]
+        # ACL Study 
+        conditions = [f'agent={p}' for p in ['HME', 'LPAgent']]
+        labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline']]
+        get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=150)
