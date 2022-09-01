@@ -132,9 +132,9 @@ class GoalSampler:
         g_tensor = torch.tensor(goals, dtype=torch.float32)
         ag_tensor = torch.tensor(ag, dtype=torch.float32)
         if self.args.cuda:
-            obs_norm_tensor.cuda()
-            g_tensor.cuda()
-            ag_tensor.cuda()
+            obs_norm_tensor = obs_norm_tensor.cuda()
+            g_tensor = g_tensor.cuda()
+            ag_tensor = ag_tensor.cuda()
         
         with torch.no_grad():
             self.goal_evaluator.policy.model.forward_pass(obs_norm_tensor, ag_tensor, g_tensor)
