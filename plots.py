@@ -1,5 +1,6 @@
 import json
 import os
+from turtle import title
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,9 +22,9 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
           [0.466, 0.674, 0.8], [0.929, 0.04, 0.125],
           [0.3010, 0.245, 0.33], [0.635, 0.078, 0.184], [0.35, 0.78, 0.504]]
 cmap = plt.get_cmap('tab10')
-# colors = np.array(cmap.colors)[[0, 17, 2, 14, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
+# colors = np.array(cmap.colors)[[14, 17, 2, 0, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
 colors = np.array(cmap.colors)
-folder = 'query_study'
+folder = 'main_study'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/iclr2023/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/iclr2023/'
@@ -32,7 +33,8 @@ TO_PLOT = ['proposed_beyond']
 
 metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
                    'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
-                   'nb_internalized_pairs': '# Internalized goals', 'agent_nodes': '# Agent nodes'}
+                   'nb_internalized_pairs': '# Internalized goals', 'agent_nodes': '# Agent nodes', '# class_agent 10': '# S4', '# class_agent 11': '# S5',
+                   '# class_agent 4': '# S4', '# class_agent 5': '# S4'}
 NB_CLASSES = 11 # 12 for 5 blocks
 
 LINE = 'mean'
@@ -45,11 +47,11 @@ MARKERSIZE = 15 # 15 for per class
 ALPHA = 0.3
 ALPHA_TEST = 0.05
 MARKERS = ['o', 'v', 's', 'P', 'D', 'X', "*", 'v', 's', 'p', 'P', '1']
-FREQ = 1
+FREQ = 5
 NB_BUCKETS = 10
 NB_EPS_PER_EPOCH = 2000
 NB_VALID_GOALS = 35
-LAST_EP = 122
+LAST_EP = 140
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
 line, err_min, err_plus = get_stat_func(line=LINE, err=ERR)
 COMPRESSOR = CompressPDF(4)
@@ -105,7 +107,7 @@ def setup_n_figs(n, m, xlabels=None, ylabels=None, xlims=None, ylims=None):
     #     if xlims[i_ax]:
     #         ax.set_xlim(xlims[i_ax])
     # fig, axs = plt.subplots(2, 3, figsize=(25, 10), frameon=False)
-    fig, axs = plt.subplots(n, m, figsize=(12*m,10*n), frameon=False)
+    fig, axs = plt.subplots(n, m, figsize=(14*m,12*n), frameon=False)
     axs = axs.ravel()
     # fig = plt.figure(figsize=(22, 7))
     # axs = np.array([plt.subplot(141, gridspec_kw={'width_ratios': [3, 1]}), plt.subplot(142, gridspec_kw={'width_ratios': [3, 1]}),
@@ -117,7 +119,7 @@ def setup_n_figs(n, m, xlabels=None, ylabels=None, xlims=None, ylims=None):
         ax.spines['right'].set_linewidth(3)
         ax.spines['bottom'].set_linewidth(3)
         ax.spines['left'].set_linewidth(3)
-        ax.tick_params(width=5, direction='in', length=15, labelsize='50', zorder=10)
+        ax.tick_params(width=5, direction='in', length=15, labelsize='70', zorder=10)
         if xlabels[i_ax]:
             xlab = ax.set_xlabel(xlabels[i_ax])
             artists += (xlab,)
@@ -249,6 +251,54 @@ def plot_sr_av(max_len, experiment_path, folder):
     # ax.set_facecolor((244/255, 244/255, 244/255))
     save_fig(path=SAVE_PATH + folder + '_sr.pdf', artists=artists)
 
+def barplot_discovered(max_len, experiment_path, titles, folders):
+    m = len(folders)
+    fig, artists, ax = setup_n_figs(n=1,
+                                   m=m, 
+                                #    xlabels=[None, None, 'Episodes (x$10^3$)', 'Episodes (x$10^3$)'],
+                                #    ylabels= ['Success Rate', None] * 2,
+                                   xlabels = [None] * m,
+                                   ylabels = [None] + [None] * (m-1),
+                                   xlims = [[-0.75, 3.75] for _ in range(m)],
+                                   ylims= [[-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050]]
+        )
+    for k, folder in enumerate(folders):
+        condition_path = experiment_path + folder + '/'
+        list_runs = sorted(os.listdir(condition_path))
+        discovered_goals = np.zeros([len(list_runs), 4])
+        discovered_goals.fill(np.nan)
+        for i_run, run in enumerate(list_runs):
+            run_path = condition_path + run + '/'
+            data_run = pd.read_csv(run_path + 'progress.csv')
+
+            T = len(data_run['Eval_SR_1'][:LAST_EP + 1])
+            for i, j in enumerate([5, 7, 10, 11]):
+                discovered_goals[i_run, i] = data_run[f'# class_agent {j}'][T-1]
+        
+        mean_values = np.mean(discovered_goals, axis=0)
+        std_values = np.std(discovered_goals, axis=0)
+        classes = ['$S_3$', '$S_2$ & $S_3$', '$S_4$', '$S_5$']
+        x_pos = np.arange(len(classes))
+        for c, m, s in zip(classes, mean_values, std_values):
+            print(f'{c}: {int(m)} += {int(s)}')
+        print('===' * 10)
+        for i in range(NB_CLASSES):
+            ax[k].bar(x_pos, mean_values, align='center', color=colors, alpha=0.5, capsize=10)
+        ax[k].set_xticks(x_pos)
+        ax[k].set_xticklabels([])
+        ax[k].yaxis.grid(True)
+        ax[k].set_title(titles[k], fontname='monospace', fontweight='bold')
+    leg = fig.legend(['$S_3$', '$S_2$ & $S_3$', '$S_4$', '$S_5$'],
+                    #['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
+                    loc='upper center',
+                    bbox_to_anchor=(0.505, 1.25),
+                    ncol=10,
+                    fancybox=True,
+                    shadow=True,
+                    prop={'size': 75, 'weight': 'normal'},
+                    markerscale=1)
+    artists += (leg,)
+    save_fig(path=SAVE_PATH + 'per_class.pdf', artists=artists)
 
 def plot_sr_av_all(max_len, experiment_path, titles, folders):
     m = len(folders)
@@ -308,7 +358,7 @@ def plot_sr_av_all(max_len, experiment_path, titles, folders):
     leg = fig.legend(['$C_1$', '$C_2$', '$S_2$', '$S_3$', '$S_2$ & $S_2$', '$S_2$ & $S_3$', '$P_3$', '$P_3$ & $S_2$', '$S_4$', '$S_5$'],
                     #['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
                     loc='upper center',
-                    bbox_to_anchor=(0.505, 1.22),
+                    bbox_to_anchor=(0.505, 1.25),
                     ncol=10,
                     fancybox=True,
                     shadow=True,
@@ -404,6 +454,8 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
         conditions = os.listdir(experiment_path)
     probas = np.zeros([max_seeds, len(conditions), LAST_EP + 1 ])
     probas.fill(np.nan)
+    probas1 = np.zeros([max_seeds, len(conditions), LAST_EP + 1 ])
+    probas1.fill(np.nan)
     for i_cond, cond in enumerate(conditions):
         cond_path = experiment_path + cond + '/'
         list_runs = sorted(os.listdir(cond_path))
@@ -411,9 +463,11 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
             run_path = cond_path + run + '/'
             data_run = pd.read_csv(run_path + 'progress.csv')
             p= np.array(data_run[to_plot][:LAST_EP + 1])
+            p1 = np.array(data_run['proposed_ss'][:LAST_EP + 1])
             probas[i_run, i_cond, :p.size] = p.copy()
+            probas1[i_run, i_cond, :p.size] = p1.copy()
 
-
+    probas = probas / probas1
     probas_per_cond_stats = np.zeros([len(conditions), LAST_EP + 1, 3])
     probas_per_cond_stats[:, :, 0] = line(probas)
     probas_per_cond_stats[:, :, 1] = err_min(probas)
@@ -455,7 +509,7 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
         plt.fill_between(x_eps, probas_per_cond_stats[i, x, 1], probas_per_cond_stats[i, x, 2], color=colors[i], alpha=ALPHA)
     plt.grid()
     # ax.set_facecolor((244/255, 244/255, 244/255))
-    save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
+    # save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
     return probas_per_cond_stats.copy()
 
 def plot_counts_and_sr(experiment_path, conditions):
@@ -548,16 +602,23 @@ if __name__ == '__main__':
         # plot_counts_and_sr(experiment_path=experiment_path, conditions=['main_beta=50'])
 
         # Study main
-        # conditions = [f'main_beta={p}' for p in [0, 20, 50, 100, 200, 500]]
-        # labels = [f'β={b}' for b in [0, 20, 50, 100, 200, 500]]
+        conditions = [f'main_beta={p}' for p in [0, 20, 50, 100, 200, 500]]
+        labels = ['Social'] + [f'HME-β={b}' for b in [20, 50, 100, 200]] + ['Autotelic']
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
+        # plot_sr_av_all(max_len, experiment_path, titles=labels, folders=conditions)
         # Exploration Study
         # conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F2andRandom', 'F3andRandom']]
         # labels = [f'{b}' for b in ['HME-β=50', 'Uniform&Random', 'F2&Random', 'F3&Random']]
+        # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
         # ACL Study 
-        # conditions = [f'agent={p}' for p in ['HME', 'LPAgent']]
-        # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline']]
-        # Fixed queries study
-        conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
-        labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
+        # conditions = [f'agent={p}' for p in ['HME', 'LPAgent', 'VDSAgent']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline', 'VDS Baseline']]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
-        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=150)
+        # Fixed queries study
+        # conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
+        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=350)
+        # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
