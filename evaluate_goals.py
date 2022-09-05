@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from mpi4py import MPI
 import env
@@ -10,6 +11,28 @@ from rollout import RolloutWorker
 from goal_sampler import GoalSampler
 from utils import get_env_params, apply_on_table_config
 from graph.sp_graph import SpGraph
+
+
+def launch(args):
+    rank = MPI.COMM_WORLD.Get_rank()
+    agent_names = ['oracle_block_beta=0', 'main_beta=20', 'main_beta=50', 'main_beta=100', 'main_beta=200', 'main_beta=500']
+
+    for agent_name in agent_names:
+        if rank == 0:
+            print(f'=-=-=-=-=-=-=-=-= {agent_name} =-=-=-=-=-=-=-=-=')
+        path = f'{agent_name}/'
+        epoch = 140
+        all_assignement_goals = []
+        if rank == 0:
+            all_assignement_goals = launch_eval_coverage(args, path, epoch)
+        
+        # Synchronize
+        all_assignement_goals = MPI.COMM_WORLD.bcast(all_assignement_goals, root=0)
+
+        goals_list = [all_assignement_goals]
+
+        for goals in goals_list:
+            launch_eval_sr(args, path, epoch, goals)
 
 
 def launch_eval_sr(args, path, ep, goals):
@@ -128,25 +151,6 @@ if __name__ == '__main__':
     os.environ['MKL_NUM_THREADS'] = '1'
     os.environ['IN_MPI'] = '1'
 
-    rank = MPI.COMM_WORLD.Get_rank()
     args = get_args()
-
-
-    agent_names = ['oracle_block_beta=0', 'main_beta=20', 'main_beta=50', 'main_beta=100', 'main_beta=200', 'main_beta=500']
-
-    for agent_name in agent_names:
-        if rank == 0:
-            print(f'=-=-=-=-=-=-=-=-= {agent_name} =-=-=-=-=-=-=-=-=')
-        path = f'{agent_name}/'
-        epoch = 140
-        all_assignement_goals = []
-        if rank == 0:
-            all_assignement_goals = launch_eval_coverage(args, path, epoch)
-        
-        # Synchronize
-        all_assignement_goals = MPI.COMM_WORLD.bcast(all_assignement_goals, root=0)
-
-        goals_list = [all_assignement_goals]
-
-        for goals in goals_list:
-            launch_eval_sr(args, path, epoch, goals)
+    args.cuda = torch.cuda.is_available()
+    launch(args)
