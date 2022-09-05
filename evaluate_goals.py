@@ -21,7 +21,7 @@ def launch(args):
         if rank == 0:
             print(f'=-=-=-=-=-=-=-=-= {agent_name} =-=-=-=-=-=-=-=-=')
         path = f'{agent_name}/'
-        epoch = 140
+        epoch = 90 if agent_name == 'oracle_block_beta=0' else 130
         all_assignement_goals = []
         if rank == 0:
             all_assignement_goals = launch_eval_coverage(args, path, epoch)
