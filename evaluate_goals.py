@@ -71,17 +71,17 @@ def launch_eval_coverage(args, path, ep):
     sp_graph = SpGraph(args=args)
 
     # Retrieving Assignment Graph goals
-    sp_goals = [apply_on_table_config(g) for g in sp_graph.assignment_graph.configs.keys()]
-    print(f'Size of the assignment graph: {len(sp_goals)}')
+    # sp_goals = [apply_on_table_config(g) for g in sp_graph.oracle_graph.configs.keys()]
+    # print(f'Size of the assignment graph: {len(sp_goals)}')
     # Retrieving Oracle Graph Goals
-    oracle_goals = [apply_on_table_config(g) for g in sp_graph.oracle_graph.configs.keys()]
-    print(f'Size of the oracle graph: {len(oracle_goals)}')
+    sp_goals = [apply_on_table_config(g) for g in sp_graph.oracle_graph.configs.keys()]
+    print(f'Size of the oracle graph: {len(sp_goals)}')
     
     list_runs = sorted(os.listdir(path))
     ratios_assign = np.empty([len(list_runs)])
     ratios_assign.fill(np.nan)
-    ratios_oracle = np.empty([len(list_runs)])
-    ratios_oracle.fill(np.nan)
+    # ratios_oracle = np.empty([len(list_runs)])
+    # ratios_oracle.fill(np.nan)
     ratios_new = np.empty([len(list_runs)])
     ratios_new.fill(np.nan)
 
@@ -92,28 +92,23 @@ def launch_eval_coverage(args, path, ep):
             agent_goals = pkl.load(file=f)
 
         agent_goals = [tuple(g) for g in agent_goals]    
-        r_discovered_assigned, r_discovered_oracle, r_new = evaluate_coverage(agent_goals, sp_goals, oracle_goals)
+        r_discovered_assigned, r_new = evaluate_coverage(agent_goals, sp_goals)
         ratios_assign[i] = r_discovered_assigned
-        ratios_oracle[i] = r_discovered_oracle
         ratios_new[i] = r_new
 
     mean_ratio_assign = np.mean(ratios_assign)
     std_ratio_assign = np.std(ratios_assign)
 
-    mean_ratio_oracle = np.mean(ratios_oracle)
-    std_ratio_oracle = np.std(ratios_oracle)
-
     mean_ratio_new = np.mean(ratios_new)
     std_ratio_new = np.std(ratios_new)
     
     print(f'The ratio of discovered assignement goals: {mean_ratio_assign:.3f}±{std_ratio_assign:.3f}')
-    print(f'The ratio of discovered oracle goals: {mean_ratio_oracle:.3f}±{std_ratio_oracle:.3f}')
     print(f'The ratio of new goals: {mean_ratio_new:.3f}±{std_ratio_new:.3f}')
 
-    return sp_goals, oracle_goals
+    return sp_goals
 
 
-def evaluate_coverage(discovered_goals, assignement_goals, oracle_goals):
+def evaluate_coverage(discovered_goals, assignement_goals):
     """ Given an array of the discovered goals by the agent, an array of goals assigned by SP and oracle goals
     Returns
     1/ the ratio of discovered assignement goals
@@ -123,13 +118,9 @@ def evaluate_coverage(discovered_goals, assignement_goals, oracle_goals):
     n_commun_assign = len(inter_assign)
     ratio_discovered_assignement = n_commun_assign / len(assignement_goals)
 
-    inter_oracle = set(discovered_goals).intersection(set(oracle_goals))
-    n_commun_oracle = len(inter_oracle)
-    ratio_discovered_oracle = n_commun_oracle / len(oracle_goals)
+    ratio_new_goals = (len(discovered_goals) - n_commun_assign) / len(discovered_goals)
 
-    ratio_new_goals = (len(discovered_goals) - n_commun_oracle) / len(discovered_goals)
-
-    return ratio_discovered_assignement, ratio_discovered_oracle, ratio_new_goals
+    return ratio_discovered_assignement, ratio_new_goals
 
 if __name__ == '__main__':
     # Prevent hyperthreading between MPI processes
@@ -140,23 +131,22 @@ if __name__ == '__main__':
     rank = MPI.COMM_WORLD.Get_rank()
     args = get_args()
 
-    agent_names = ['internalization_strategy=4', 'internalization_strategy=3', 'internalization_strategy=2', 
-                   'internalization_strategy=1', 'internalization_strategy=0']
+
+    agent_names = ['oracle_block_beta=0', 'main_beta=20', 'main_beta=50', 'main_beta=100', 'main_beta=200', 'main_beta=500']
+
     for agent_name in agent_names:
         if rank == 0:
             print(f'=-=-=-=-=-=-=-=-= {agent_name} =-=-=-=-=-=-=-=-=')
-        path = f'internalized_study/{agent_name}/'
-        epoch = 120
+        path = f'{agent_name}/'
+        epoch = 140
         all_assignement_goals = []
-        all_oracle_goals = []
         if rank == 0:
-            all_assignement_goals, all_oracle_goals = launch_eval_coverage(args, path, epoch)
+            all_assignement_goals = launch_eval_coverage(args, path, epoch)
         
         # Synchronize
         all_assignement_goals = MPI.COMM_WORLD.bcast(all_assignement_goals, root=0)
-        all_oracle_goals = MPI.COMM_WORLD.bcast(all_oracle_goals, root=0)
 
-        goals_list = [all_assignement_goals, all_oracle_goals]
+        goals_list = [all_assignement_goals]
 
         for goals in goals_list:
             launch_eval_sr(args, path, epoch, goals)
