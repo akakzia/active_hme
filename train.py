@@ -181,7 +181,7 @@ if __name__ == '__main__':
     args = get_args()
 
     # Align arguments according to agent
-    if args.agent in ['F2andRandom', 'F3andRandom', 'UniformandRandom']:
+    if args.agent in ['F1andRandom', 'F2andRandom', 'F3andRandom', 'UniformandRandom']:
         args.fixed_queries = True
         args.fixed_query_proba = 0.8 # probability of following the goal chaining curriculum (with p=0.2, randomly target goal and pursue it)
 

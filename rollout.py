@@ -30,7 +30,7 @@ class RolloutWorker:
 
         self.agent = args.agent
         
-        if self.agent == 'HME':
+        if self.agent == 'HME' or self.agent == 'F1andRandom': 
             self.frontier_type = 'f1'
         elif self.agent == 'F2andRandom':
             self.frontier_type = 'f2'

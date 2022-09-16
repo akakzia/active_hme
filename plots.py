@@ -24,12 +24,12 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
 cmap = plt.get_cmap('tab10')
 # colors = np.array(cmap.colors)[[14, 17, 2, 0, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
 colors = np.array(cmap.colors)
-folder = 'main_study'
+folder = 'query_study'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/iclr2023/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/iclr2023/'
 # TO_PLOT = ['_global_sr']
-TO_PLOT = ['proposed_beyond']
+TO_PLOT = ['query_proba']
 
 metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
                    'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
@@ -51,7 +51,7 @@ FREQ = 5
 NB_BUCKETS = 10
 NB_EPS_PER_EPOCH = 2000
 NB_VALID_GOALS = 35
-LAST_EP = 140
+LAST_EP = 130
 LIM = NB_EPS_PER_EPOCH * LAST_EP / 1000 + 5
 line, err_min, err_plus = get_stat_func(line=LINE, err=ERR)
 COMPRESSOR = CompressPDF(4)
@@ -454,8 +454,6 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
         conditions = os.listdir(experiment_path)
     probas = np.zeros([max_seeds, len(conditions), LAST_EP + 1 ])
     probas.fill(np.nan)
-    probas1 = np.zeros([max_seeds, len(conditions), LAST_EP + 1 ])
-    probas1.fill(np.nan)
     for i_cond, cond in enumerate(conditions):
         cond_path = experiment_path + cond + '/'
         list_runs = sorted(os.listdir(cond_path))
@@ -463,11 +461,9 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
             run_path = cond_path + run + '/'
             data_run = pd.read_csv(run_path + 'progress.csv')
             p= np.array(data_run[to_plot][:LAST_EP + 1])
-            p1 = np.array(data_run['proposed_ss'][:LAST_EP + 1])
             probas[i_run, i_cond, :p.size] = p.copy()
-            probas1[i_run, i_cond, :p.size] = p1.copy()
 
-    probas = probas / probas1
+    # probas = probas / 2600
     probas_per_cond_stats = np.zeros([len(conditions), LAST_EP + 1, 3])
     probas_per_cond_stats[:, :, 0] = line(probas)
     probas_per_cond_stats[:, :, 1] = err_min(probas)
@@ -509,7 +505,7 @@ def get_query_proba(experiment_path, max_seeds, conditions=None, labels=None, to
         plt.fill_between(x_eps, probas_per_cond_stats[i, x, 1], probas_per_cond_stats[i, x, 2], color=colors[i], alpha=ALPHA)
     plt.grid()
     # ax.set_facecolor((244/255, 244/255, 244/255))
-    # save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
+    save_fig(path=SAVE_PATH + PLOT + '.pdf', artists=artists)
     return probas_per_cond_stats.copy()
 
 def plot_counts_and_sr(experiment_path, conditions):
@@ -602,10 +598,10 @@ if __name__ == '__main__':
         # plot_counts_and_sr(experiment_path=experiment_path, conditions=['main_beta=50'])
 
         # Study main
-        conditions = [f'main_beta={p}' for p in [0, 20, 50, 100, 200, 500]]
-        labels = ['Social'] + [f'HME-β={b}' for b in [20, 50, 100, 200]] + ['Autotelic']
+        # conditions = [f'main_beta={p}' for p in [0, 20, 50, 100, 200, 500]]
+        # labels = ['Social'] + [f'HME-β={b}' for b in [20, 50, 100, 200]] + ['Autotelic']
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
-        barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
+        # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
         # plot_sr_av_all(max_len, experiment_path, titles=labels, folders=conditions)
         # Exploration Study
         # conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F2andRandom', 'F3andRandom']]
@@ -616,9 +612,18 @@ if __name__ == '__main__':
         # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline', 'VDS Baseline']]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # Fixed queries study
-        # conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
-        # labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
+        conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
+        labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
-        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=350)
+        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=0.2)
         # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
+        # Internalization + ACL
+        # conditions = [f'agent={p}' for p in ['HME', 'LPAgent', 'VDSAgent', 'Autotelic']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline', 'VDS Baseline', 'Autotelic']]
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        # Internalization + ACL
+        # conditions = [f'internalization_strategy={p}' for p in [0]]
+        # labels = [f'{b}' for b in ['w/o internalization']]
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=350)
