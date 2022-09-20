@@ -306,9 +306,22 @@ class HMERolloutWorker(RolloutWorker):
     def launch_social_phase(self, agent_network, time_dict):
         """ Launch the social episodes phase: 
         First, produce rollouts. Then, concatenate obtained rollouts and relabel based on the beyond goal"""
-        generated_episodes = self.perform_social_episodes(agent_network, time_dict)
+        if self.agent == 'Beyond':
+            # Sample beyond goal 
+            if len(agent_network.teacher.agent_frontier) > 0:
+                all_frontier = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
+                frontier_goals = random.choices(all_frontier, k=self.args.num_rollouts_per_mpi)
+                goals = np.array([next(iter(agent_network.sample_from_frontier(g, 1))) for g in frontier_goals])
+                goals = np.array([apply_on_table_config(g) for g in goals])
+            else:
+                goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
+            all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
+                                            true_eval=False,  # these are not offline evaluation episodes
+                                            )
+        else:
+            generated_episodes = self.perform_social_episodes(agent_network, time_dict)
 
-        all_episodes = merge_mini_episodes_and_relabel(generated_episodes)
+            all_episodes = merge_mini_episodes_and_relabel(generated_episodes)
         return all_episodes
 
     def launch_autotelic_phase(self, time_dict):

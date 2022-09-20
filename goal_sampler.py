@@ -217,11 +217,11 @@ class GoalSampler:
                 
                 # if goal already encountered before, we are sure its index exists in the visits list
                 # Update number of visits
-                elif str(last_ag) in self.discovered_goals_str and condition_stability and self.agent != 'HME':
+                elif str(last_ag) in self.discovered_goals_str and condition_stability and self.agent not in  ['HME', 'Beyond']:
                     self.visits[self.goal_to_id[str(last_ag)]] += 1
                 # Add goal if not already encountered (to include internalized pairs in discovere buffer)
 
-                if self.agent == 'HME':
+                if self.agent == 'HME' or self.agent == 'Beyond':
                     if str(goal) not in self.discovered_goals_str: 
                         self.discovered_goals.append(goal.copy())
                         self.discovered_goals_str.append(str(goal))
