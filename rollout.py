@@ -311,8 +311,8 @@ class HMERolloutWorker(RolloutWorker):
             if len(agent_network.teacher.agent_frontier) > 0:
                 all_frontier = [agent_network.semantic_graph.getConfig(i) for i in agent_network.teacher.agent_frontier]
                 frontier_goals = random.choices(all_frontier, k=self.args.num_rollouts_per_mpi)
-                goals = np.array([next(iter(agent_network.sample_from_frontier(g, 1))) for g in frontier_goals])
-                goals = np.array([apply_on_table_config(g) for g in goals])
+                goals = np.array([next(iter(agent_network.sample_from_frontier(g, 1)), None) for g in frontier_goals])
+                goals = np.array([apply_on_table_config(g) if g else apply_on_table_config(fg) for g, fg in zip(goals, frontier_goals)])
             else:
                 goals = self.goal_sampler.sample_goals(n_goals=self.args.num_rollouts_per_mpi, evaluation=False)
             all_episodes = self.generate_rollout(goals=goals,  # list of goal configurations
