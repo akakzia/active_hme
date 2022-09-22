@@ -11,7 +11,7 @@ import json
 from scipy.stats import ttest_ind
 from utils import get_stat_func, CompressPDF
 
-font = {'size': 70}
+font = {'size': 80}
 matplotlib.rc('font', **font)
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -24,12 +24,12 @@ colors = [[0, 0.447, 0.7410], [0.85, 0.325, 0.098],  [0.466, 0.674, 0.188], [0.9
 cmap = plt.get_cmap('tab10')
 # colors = np.array(cmap.colors)[[14, 17, 2, 0, 5, 8, 9, 12, 13, 14, 16, 17, 18]]
 colors = np.array(cmap.colors)
-folder = 'query_study'
+folder = 'exploration_study'
 
 RESULTS_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/results/iclr2023/' + folder + '/'
 SAVE_PATH = '/home/ahmed/Documents/Amaterasu/hachibi/active_hme/plots/iclr2023/'
 # TO_PLOT = ['_global_sr']
-TO_PLOT = ['query_proba']
+TO_PLOT = ['global_sr']
 
 metric_to_label = {'stepping_stones_len': '# Stepping Stones', 'query_proba': 'Query probability', 'query_proba_intern': 'Internalization probability',
                    'nb_discovered': '# Discovered goals', 'proposed_beyond': '# Proposed beyond', 'proposed_ss': '# Proposed SS', 
@@ -63,7 +63,7 @@ COMPRESSOR = CompressPDF(4)
 
 
 def setup_figure(xlabel=None, ylabel=None, xlim=None, ylim=None):
-    fig = plt.figure(figsize=(37, 20), frameon=False) # 34 18 for semantic
+    fig = plt.figure(figsize=(42, 25), frameon=False) # 34 18 for semantic
     ax = fig.add_subplot(111)
     ax.spines['top'].set_linewidth(6)
     ax.spines['right'].set_linewidth(6)
@@ -253,14 +253,14 @@ def plot_sr_av(max_len, experiment_path, folder):
 
 def barplot_discovered(max_len, experiment_path, titles, folders):
     m = len(folders)
-    fig, artists, ax = setup_n_figs(n=1,
-                                   m=m, 
+    fig, artists, ax = setup_n_figs(n=2,
+                                   m=4, 
                                 #    xlabels=[None, None, 'Episodes (x$10^3$)', 'Episodes (x$10^3$)'],
                                 #    ylabels= ['Success Rate', None] * 2,
                                    xlabels = [None] * m,
                                    ylabels = [None] + [None] * (m-1),
                                    xlims = [[-0.75, 3.75] for _ in range(m)],
-                                   ylims= [[-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050], [-0.02, 1050]]
+                                   ylims= [[-0.02, 810], [-0.02, 100], [-0.02, 100], [-0.02, 100], [-0.02, 100], [-0.02, 100], [-0.02, 100], [-0.02, 100]]
         )
     for k, folder in enumerate(folders):
         condition_path = experiment_path + folder + '/'
@@ -283,7 +283,7 @@ def barplot_discovered(max_len, experiment_path, titles, folders):
             print(f'{c}: {int(m)} += {int(s)}')
         print('===' * 10)
         for i in range(NB_CLASSES):
-            ax[k].bar(x_pos, mean_values, align='center', color=colors, alpha=0.5, capsize=10)
+            ax[k].bar(x_pos, mean_values, yerr=std_values, error_kw=dict(lw=5, capsize=25, capthick=3), align='center', color=colors, alpha=0.5, capsize=20)
         ax[k].set_xticks(x_pos)
         ax[k].set_xticklabels([])
         ax[k].yaxis.grid(True)
@@ -291,11 +291,11 @@ def barplot_discovered(max_len, experiment_path, titles, folders):
     leg = fig.legend(['$S_3$', '$S_2$ & $S_3$', '$S_4$', '$S_5$'],
                     #['No Stacks', '$\widetilde{S}_2$', '$\widetilde{S}_3$', '$\widetilde{S}_4$', '$\widetilde{S}_5$', 'Global'],
                     loc='upper center',
-                    bbox_to_anchor=(0.505, 1.25),
+                    bbox_to_anchor=(0.505, 1.15),
                     ncol=10,
                     fancybox=True,
                     shadow=True,
-                    prop={'size': 75, 'weight': 'normal'},
+                    prop={'size': 95, 'weight': 'normal'},
                     markerscale=1)
     artists += (leg,)
     save_fig(path=SAVE_PATH + 'per_class.pdf', artists=artists)
@@ -406,11 +406,11 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
         labels = conditions
     leg = plt.legend(labels,
                      loc='upper center',
-                     bbox_to_anchor=(0.5, 1.15),
+                     bbox_to_anchor=(0.5, 1.12),
                      ncol=7,
                      fancybox=True,
                      shadow=True,
-                     prop={'size': 60, 'weight': 'bold'},
+                     prop={'size': 62, 'weight': 'bold'},
                      markerscale=1,
                      )
     for l in leg.get_lines():
@@ -442,8 +442,8 @@ def get_mean_sr(experiment_path, max_len, max_seeds, conditions=None, labels=Non
                 plt.scatter(x=x_eps[inds_sign], y=np.ones([inds_sign.size]) + 0.04 + 0.05 * i, marker='*', color=colors[i_cond], s=1000)
             i += 1
 
-    ax.hlines(y=0.93, xmin=0, xmax=(LAST_EP + 1) * NB_EPS_PER_EPOCH / 1000, color='black', linewidth=3, linestyles='dashed')
-    ax.set_yticks([0, 0.25, 0.5, 0.75, 0.93, 1])
+    # ax.hlines(y=0.93, xmin=0, xmax=(LAST_EP + 1) * NB_EPS_PER_EPOCH / 1000, color='black', linewidth=3, linestyles='dashed')
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
     plt.grid()
     # ax.set_facecolor((244/255, 244/255, 244/255))
     save_fig(path=SAVE_PATH + folder + PLOT + '.pdf', artists=artists)
@@ -604,19 +604,20 @@ if __name__ == '__main__':
         # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
         # plot_sr_av_all(max_len, experiment_path, titles=labels, folders=conditions)
         # Exploration Study
-        # conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F2andRandom', 'F3andRandom']]
-        # labels = [f'{b}' for b in ['HME-β=50', 'Uniform&Random', 'F2&Random', 'F3&Random']]
-        # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
+        conditions = [f'agent={p}' for p in ['HME', 'UniformandRandom', 'F1andRandom', 'F2andRandom', 'F3andRandom', 'LPAgent', 'VDSAgent', 'UniformandStop']]
+        labels = [f'{b}' for b in ['HME-50', 'Go-Exp Rand', 'Go-Exp SS', 'Go-Exp Nov', 'Go-Exp LP', 'LP baseline', 'VDS baseline', 'Autotelic']]
+        # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
+        barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
         # ACL Study 
         # conditions = [f'agent={p}' for p in ['HME', 'LPAgent', 'VDSAgent']]
         # labels = [f'{b}' for b in ['HME-β=50', 'LP Baseline', 'VDS Baseline']]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # Fixed queries study
-        conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
-        labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
+        # conditions = [f'agent={p}' for p in ['HME', 'f0.05', 'f0.06', 'f0.07']]
+        # labels = [f'{b}' for b in ['HME-β=50', 'Fixed 0.05', 'Fixed 0.06', 'Fixed 0.07']]
         # get_mean_sr(experiment_path, max_len, max_seeds, conditions, labels, ref=conditions[0])
         # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
-        get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=0.2)
+        # get_query_proba(experiment_path, max_seeds, conditions, labels, to_plot=PLOT, max_value=0.2)
         # barplot_discovered(max_len, experiment_path, titles=labels, folders=conditions)
         # Internalization + ACL
         # conditions = [f'agent={p}' for p in ['HME', 'LPAgent', 'VDSAgent', 'Autotelic']]
