@@ -33,6 +33,6 @@ the _graph/_ folder.
 
 The following line trains the GANGSTR agent with social intervention ratio of 20% and a Frontier and Beyond Strategy
 
-```mpirun -np 24 python train.py --env-name FetchManipulate5Objects-v0 --agent --beta 50 'HME' ```
+```mpirun -np 20 python train.py --env-name FetchManipulate5Objects-v0 --agent --beta 50 'HME' ```
 
 When beta is equal to 0, the GANGSTR agent only performs social learning. By contrast, when beta is higher than 200, only individual episodes are conducted. 
